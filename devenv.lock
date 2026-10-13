@@ -359,11 +359,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790500375,
-        "narHash": "sha256-XN3sDtn8TU9hAc9xqZ+SqRB/HHm2wjxM6aSWYLJU+oo=",
+        "lastModified": 1791909798,
+        "narHash": "sha256-VAhpCOmrun/KXimYfR8NM88bciKCui7CqHHhThSzgag=",
         "owner": "cachix",
         "repo": "git-hooks.nix",
-        "rev": "a0e4241b51206fbcbf52fd322eb5f0cd80f153c4",
+        "rev": "1ba1dbfe28738c9a71c266be6efa5b89e75491a9",
         "type": "github"
       },
       "original": {
@@ -855,11 +855,11 @@
         "uv2nix": "uv2nix"
       },
       "locked": {
-        "lastModified": 1791907942,
-        "narHash": "sha256-7VaOMlLy24bQO6Eaxoz3RgtIZfhh4CEjTjxQz94YxTs=",
+        "lastModified": 1791910684,
+        "narHash": "sha256-Psh21/kWm7F2gvHLucR0pQp+cG5nX7Fz7rVRn8Xgs8o=",
         "ref": "refs/heads/main",
-        "rev": "31938818f077af3c4b6452541aa29a5d84b02e08",
-        "revCount": 388,
+        "rev": "f2fc3c04a1650c057c4f9731599bf0989ab7b0e1",
+        "revCount": 389,
         "type": "git",
         "url": "https://git.cmu.dev/ScottyLabs/kennel"
       },

@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import schema from "./schema.sql?raw";
 
 // Opens the database file, creating it if it doesn't exist.
-// DATABASE_PATH lets the server use a different location later.
+// devenv shell and kennel both set DATABASE_PATH
 export const db = new DatabaseSync(process.env.DATABASE_PATH ?? "nova.db");
 
 // Lets reads and writes overlap (many voters saving at once don't block each other)

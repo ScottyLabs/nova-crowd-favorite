@@ -4,14 +4,15 @@ Crowd favorite voting app for Nova, built with SvelteKit and SQLite.
 
 ## Development
 
-Install [devenv](https://devenv.sh/getting-started/), then run:
+Log in to OpenBao and set up devenv by following kennel's [local development](https://docs.kennel.scottylabs.org/guides/secrets.html#local-development) and [devenv setup](https://docs.kennel.scottylabs.org/guides/deploying.html#2-set-up-devenv) guides.
+
+Run the dev server with hot reloading:
 
 ```sh
-devenv shell
 devenv up
 ```
 
-The app runs at <http://localhost:5173>. The shell provides Deno, installs dependencies, and configures the local SQLite database.
+The app runs at <http://localhost:5173>. The shell provides Deno, installs dependencies, and sets `DATABASE_PATH` to a local SQLite database.
 
 ```sh
 deno task check

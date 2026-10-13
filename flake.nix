@@ -29,8 +29,8 @@
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          lib = scottylabs.mkLib pkgs;
-          web = lib.buildDenoTask {
+          helpers = scottylabs.mkLib pkgs;
+          web = helpers.buildDenoTask {
             src = ./.;
             pname = "nova-crowd-favorite";
             inherit (builtins.fromJSON (builtins.readFile ./package.json)) version;
