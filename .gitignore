@@ -1,5 +1,15 @@
 node_modules
 
+# Nix / devenv
+.devenv/
+.devenv.flake.nix
+.direnv/
+.pre-commit-config.yaml
+.mcp.json
+.claude/
+result
+result-*
+
 # Output
 .output
 .vercel
@@ -7,6 +17,7 @@ node_modules
 .wrangler
 /.svelte-kit
 /build
+/dist
 
 # OS
 .DS_Store

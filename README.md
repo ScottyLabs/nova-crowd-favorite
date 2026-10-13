@@ -1,54 +1,26 @@
-# sv
+# Nova Crowd Favorite
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Crowd favorite voting app for Nova, built with SvelteKit and SQLite.
 
-## Creating a project
+## Development
 
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
+Install [devenv](https://devenv.sh/getting-started/), then run:
 
 ```sh
-# recreate this project
-npx sv@1.1.1 create --template minimal --types ts --add prettier eslint sveltekit-adapter="adapter:node" --install npm .
+devenv shell
+devenv up
 ```
 
-## Adding features
-
-Add features to your project with `sv add`:
+The app runs at <http://localhost:5173>. The shell provides Deno, installs dependencies, and configures the local SQLite database.
 
 ```sh
-npx sv add
+deno task check
+prek run --all-files
+deno task build
 ```
 
-For example, to add Tailwind CSS:
+## Deployment
 
-```sh
-npx sv add tailwindcss
-```
+Configured for deployment through [Kennel](https://git.cmu.dev/ScottyLabs/kennel) as the `web` service, with persistent SQLite storage and isolated PR previews.
 
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
+[devenv.nix](./devenv.nix) defines the service and resources. [flake.nix](./flake.nix) defines the production package.
