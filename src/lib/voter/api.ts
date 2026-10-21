@@ -180,7 +180,19 @@ export function resetFakeData(): void {
   save(emptyState());
 }
 
-// Lets you type resetFakeData() in the browser console.
+/** Fill in a collection of 6 teams with 3 ranked, so screens have something to show. */
+export function seedFakeData(): void {
+  const teamIds = ["t4", "t5", "t6", "t7", "t8", "t9"];
+  save({
+    collection: teamIds.map((teamId) => ({
+      teamId,
+      note: teamId === "t5" ? "Great demo, ask about latency." : "",
+    })),
+    ballot: { ranked: ["t4", "t5", "t6"], status: "draft", submittedAt: null },
+  });
+}
+
+// Lets you type resetFakeData() or seedFakeData() in the browser console.
 if (typeof window !== "undefined") {
-  Object.assign(window, { resetFakeData });
+  Object.assign(window, { resetFakeData, seedFakeData });
 }
