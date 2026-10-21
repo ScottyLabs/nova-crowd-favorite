@@ -5,18 +5,50 @@
 	// One team in the top 5 (Figma "RankRow"): orange rank badge, name, table and
 	// description, and the six-dot grip on the right for dragging.
 	// Tapping anywhere except the grip opens the team page.
+	// The parent page owns the drag logic; this row only reports grip events
+	// and shows whatever offset and "lifted" state the parent gives it.
 
 	interface Props {
 		rank: number;
 		team: Team;
 		hasNote: boolean;
 		href: string;
+		/** How far the row is moved up or down right now, in pixels. */
+		offset?: number;
+		/** True for the row being dragged (it floats above the others). */
+		lifted?: boolean;
+		ongripdown?: (event: PointerEvent) => void;
+		ongripmove?: (event: PointerEvent) => void;
+		ongripup?: (event: PointerEvent) => void;
+		/** Keyboard reordering: -1 moves up one rank, 1 moves down one. */
+		onmove?: (direction: -1 | 1) => void;
 	}
 
-	let { rank, team, hasNote, href }: Props = $props();
+	let {
+		rank,
+		team,
+		hasNote,
+		href,
+		offset = 0,
+		lifted = false,
+		ongripdown,
+		ongripmove,
+		ongripup,
+		onmove
+	}: Props = $props();
+
+	function onkeydown(event: KeyboardEvent): void {
+		if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			onmove?.(-1);
+		} else if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			onmove?.(1);
+		}
+	}
 </script>
 
-<div class="row glass">
+<div class="row glass" class:lifted style:transform="translateY({offset}px)">
 	<a class="main" {href}>
 		<span class="badge" aria-label="Rank {rank}">{rank}</span>
 		<span class="text">
@@ -29,18 +61,38 @@
 			<span class="meta">Table {team.table} - {team.description}</span>
 		</span>
 	</a>
-	<span class="grip" aria-hidden="true">
+	<button
+		class="grip"
+		type="button"
+		aria-label="Reorder {team.name}, rank {rank}. Use the up and down arrow keys."
+		onpointerdown={ongripdown}
+		onpointermove={ongripmove}
+		onpointerup={ongripup}
+		onpointercancel={ongripup}
+		{onkeydown}
+	>
 		<Icon name="grip" size={18} />
-	</span>
+	</button>
 </div>
 
 <style>
 	.row {
+		position: relative;
 		display: flex;
 		align-items: center;
 		gap: 4px;
 		min-height: 64px;
 		padding: 10px 4px 10px 12px;
+		transition:
+			transform 0.18s ease,
+			box-shadow 0.18s ease;
+	}
+	.row.lifted {
+		z-index: 2;
+		transition: box-shadow 0.18s ease;
+		box-shadow:
+			0 14px 24px rgb(13 13 26 / 0.35),
+			0 0 12px rgb(255 255 255 / 0.9);
 	}
 	.main {
 		display: flex;
@@ -92,6 +144,17 @@
 		place-items: center;
 		width: 44px;
 		height: 44px;
+		padding: 0;
+		background: none;
+		border: none;
 		color: rgb(43 43 43 / 0.7);
+		cursor: grab;
+		/* Dragging the grip moves the row instead of scrolling the page. */
+		touch-action: none;
+		user-select: none;
+		-webkit-user-select: none;
+	}
+	.lifted .grip {
+		cursor: grabbing;
 	}
 </style>

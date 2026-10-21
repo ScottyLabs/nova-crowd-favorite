@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { getBallot, getCollection, putBallot, submitBallot } from '#lib/voter/api.ts';
 	import { getVoterCode } from '#lib/voter/identity.ts';
-	import { insertAtRank, MAX_RANKED } from '#lib/voter/ranking.ts';
+	import { insertAtRank, MAX_RANKED, moveItem } from '#lib/voter/ranking.ts';
 	import type { Ballot, CollectionItem } from '#lib/voter/types.ts';
 	import Button from '#lib/voter/ui/Button.svelte';
 	import EmptySlot from '#lib/voter/ui/EmptySlot.svelte';
@@ -28,6 +28,89 @@
 		Array.from({ length: MAX_RANKED - ranked.length }, (_, i) => ranked.length + i + 1)
 	);
 	const full = $derived(ranked.length >= MAX_RANKED);
+
+
+	// ---- Drag to reorder (by the grip dots) ----
+
+	interface DragState {
+		id: string;
+		from: number;
+		startY: number;
+		dy: number;
+		/** Height of one row plus the gap, so we know how far one rank is. */
+		pitch: number;
+		pointerId: number;
+	}
+
+	const LIST_GAP = 8;
+
+	let drag = $state<DragState | null>(null);
+	// Turns off the slide animation for one frame when a row is dropped,
+	// so rows snap into their new places instead of sliding from the old ones.
+	let settling = $state(false);
+
+	/** Where the dragged row would land if it were dropped now. */
+	const target = $derived(
+		drag === null
+			? -1
+			: Math.min(Math.max(drag.from + Math.round(drag.dy / drag.pitch), 0), ranked.length - 1)
+	);
+	/** The order to show while dragging, so the rank numbers update live. */
+	const previewOrder = $derived(drag === null ? ranked : moveItem(ranked, drag.from, target));
+
+	function offsetFor(teamId: string, index: number): number {
+		if (drag === null) return 0;
+		if (teamId === drag.id) return drag.dy;
+		const { from, pitch } = drag;
+		if (from < target && index > from && index <= target) return -pitch;
+		if (from > target && index >= target && index < from) return pitch;
+		return 0;
+	}
+
+	function startDrag(event: PointerEvent, teamId: string, index: number): void {
+		if (event.button !== 0 || !(event.currentTarget instanceof HTMLElement)) return;
+		const listItem = event.currentTarget.closest('li');
+		if (listItem === null) return;
+		event.preventDefault();
+		event.currentTarget.setPointerCapture(event.pointerId);
+		confirming = false;
+		drag = {
+			id: teamId,
+			from: index,
+			startY: event.clientY,
+			dy: 0,
+			pitch: listItem.offsetHeight + LIST_GAP,
+			pointerId: event.pointerId
+		};
+	}
+
+	function moveDrag(event: PointerEvent): void {
+		if (drag === null || event.pointerId !== drag.pointerId) return;
+		// Keep the row inside the top 5 list.
+		const min = -drag.from * drag.pitch;
+		const max = (ranked.length - 1 - drag.from) * drag.pitch;
+		drag.dy = Math.min(Math.max(event.clientY - drag.startY, min), max);
+	}
+
+	function endDrag(event: PointerEvent): void {
+		if (drag === null || event.pointerId !== drag.pointerId) return;
+		const { from } = drag;
+		const to = target;
+		settling = true;
+		drag = null;
+		if (to !== from) void saveRanking(moveItem(ranked, from, to));
+		requestAnimationFrame(() => {
+			settling = false;
+		});
+	}
+
+	/** Arrow keys on a focused grip move that team up or down one rank. */
+	function moveByKey(index: number, direction: -1 | 1): void {
+		const to = index + direction;
+		if (to < 0 || to >= ranked.length) return;
+		confirming = false;
+		void saveRanking(moveItem(ranked, index, to));
+	}
 
 	onMount(() => {
 		if (getVoterCode() === null) {
@@ -117,16 +200,26 @@
 	{:else}
 		<p class="small">Drag a team by its dots to reorder. Saves when you let go.</p>
 
-		<ol class="list">
+		<ol class="list" class:settling>
 			{#each ranked as teamId, i (teamId)}
 				{@const item = byId.get(teamId)}
 				{#if item !== undefined}
 					<li>
 						<RankRow
-							rank={i + 1}
+							rank={previewOrder.indexOf(teamId) + 1}
 							team={item.team}
 							hasNote={item.note.length > 0}
 							href="/team/{teamId}"
+							offset={offsetFor(teamId, i)}
+							lifted={drag?.id === teamId}
+							ongripdown={(event) => {
+								startDrag(event, teamId, i);
+							}}
+							ongripmove={moveDrag}
+							ongripup={endDrag}
+							onmove={(direction) => {
+								moveByKey(i, direction);
+							}}
 						/>
 					</li>
 				{/if}
@@ -201,9 +294,11 @@
 		padding: 0;
 		list-style: none;
 	}
+	.settling :global(.row) {
+		transition: none;
+	}
 	.section {
 		margin-top: 8px;
-		font-size: 16px;
 	}
 	.empty {
 		display: flex;
