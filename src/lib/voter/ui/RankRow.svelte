@@ -9,6 +9,7 @@
 	// and shows whatever offset and "lifted" state the parent gives it.
 
 	interface Props {
+		/** 1 to 5, or 0 while the row is being dragged out of the top 5. */
 		rank: number;
 		team: Team;
 		hasNote: boolean;
@@ -50,7 +51,9 @@
 
 <div class="row glass" class:lifted style:transform="translateY({offset}px)">
 	<a class="main" {href}>
-		<span class="badge" aria-label="Rank {rank}">{rank}</span>
+		<span class="badge" class:out={rank === 0} aria-label={rank === 0 ? 'Leaving top 5' : `Rank ${rank}`}>
+			{rank === 0 ? '-' : rank}
+		</span>
 		<span class="text">
 			<span class="name">
 				{team.name}
@@ -112,6 +115,10 @@
 		background: var(--flare);
 		color: var(--white);
 		font-size: 16px;
+	}
+	.badge.out {
+		background: rgb(255 255 255 / 0.5);
+		color: var(--muted);
 	}
 	.text {
 		display: flex;

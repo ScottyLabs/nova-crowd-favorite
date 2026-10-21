@@ -11,9 +11,11 @@
 		step: string;
 		children: Snippet;
 		footer?: Snippet;
+		/** Fade the footer out of the way (used while dragging a team). */
+		footerHidden?: boolean;
 	}
 
-	let { group, step, children, footer }: Props = $props();
+	let { group, step, children, footer, footerHidden = false }: Props = $props();
 </script>
 
 <Background {group} />
@@ -24,7 +26,7 @@
 		{@render children()}
 	</main>
 	{#if footer}
-		<div class="footer">
+		<div class="footer" class:hidden={footerHidden}>
 			{@render footer()}
 		</div>
 	{/if}
@@ -58,5 +60,10 @@
 		-webkit-backdrop-filter: blur(20px);
 		backdrop-filter: blur(20px);
 		border-top: 1px solid var(--ink);
+		transition: opacity 0.2s ease;
+	}
+	.footer.hidden {
+		opacity: 0;
+		pointer-events: none;
 	}
 </style>
