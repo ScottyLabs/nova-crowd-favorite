@@ -1,0 +1,117 @@
+/* Nova tokens - names match nova.scottylabs.org's CSS variables and the Figma "nova/*" variables */
+:root {
+  --mist: #d9dddf;
+  --orchid: #edadee;
+  --cobalt: #314bb4;
+  --flare: #fd500a;
+  --ink: #2b2b2b;
+  --graphite: #363636;
+  --muted: #6b6e78;
+  --paper: #f5f4f7;
+  --white: #ffffff;
+
+  --font-mono: "Fragment Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-display: "Michroma", var(--font-mono);
+
+  --glass: rgba(255, 255, 255, 0.55);
+  --glass-strong: rgba(255, 255, 255, 0.78);
+  --glass-blur: blur(16px);
+
+  --gutter: 24px;
+  --gap: 16px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--mist);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  letter-spacing: -0.03em;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+  font-weight: 400;
+}
+
+button {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--cobalt);
+  outline-offset: 2px;
+}
+
+/* Text styles from the Figma type scale */
+.title {
+  font-size: 34px;
+  line-height: 1.08;
+  color: var(--white);
+  text-shadow: 0 1px 10px rgba(31, 31, 77, 0.3);
+}
+.title-md {
+  font-size: 28px;
+  line-height: 1.08;
+  color: var(--white);
+  text-shadow: 0 1px 10px rgba(31, 31, 77, 0.3);
+}
+.heading {
+  font-size: 22px;
+  line-height: 1.2;
+}
+.small {
+  font-size: 12px;
+  line-height: 1.45;
+}
+.tiny {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* Frosted card used for callouts, inputs and rows */
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--ink);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
