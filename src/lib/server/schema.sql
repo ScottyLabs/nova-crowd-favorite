@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS ballots (
   rank_3 TEXT REFERENCES teams(id),
   rank_4 TEXT REFERENCES teams(id),
   rank_5 TEXT REFERENCES teams(id),
-  submitted_at  TEXT NOT NULL
+  status TEXT NOT NULL DEFAULT 'draft', -- either 'draft' or 'submitted'
+  submitted_at  TEXT NOT NULL -- timestamp of latest draft update or time of submission
 );
 
 CREATE TABLE IF NOT EXISTS settings (

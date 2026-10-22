@@ -1,3 +1,4 @@
 {
-  "oxc.path.oxlint": "oxlint"
+  "oxc.path.oxlint": "oxlint",
+  "oxc.enable": false
 }
