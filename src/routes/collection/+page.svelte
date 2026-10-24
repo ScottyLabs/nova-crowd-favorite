@@ -340,6 +340,7 @@
 					</span>
 				{/if}
 			</h2>
+			<Button variant="secondary" href="/scan">Scan a team</Button>
 			{#if unranked.length > 0}
 				<ul class="list">
 					{#each unranked as item (item.team.id)}
