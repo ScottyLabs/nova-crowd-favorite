@@ -61,7 +61,7 @@
 					<span class="note-mark"><Icon name="pencil" size={12} label="Has a note" /></span>
 				{/if}
 			</span>
-			<span class="meta">Table {team.table} - {team.description}</span>
+			<span class="meta">{team.members}</span>
 		</span>
 	</a>
 	<button

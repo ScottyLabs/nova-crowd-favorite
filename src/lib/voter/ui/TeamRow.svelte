@@ -24,7 +24,7 @@
 				<span class="note-mark"><Icon name="pencil" size={12} label="Has a note" /></span>
 			{/if}
 		</span>
-		<span class="meta">Table {team.table} - {team.description}</span>
+		<span class="meta">{team.members}</span>
 	</a>
 	<button class="chip" type="button" disabled={!canAdd} onclick={onadd}>
 		{canAdd ? '+ Top 5' : 'Top 5 full'}

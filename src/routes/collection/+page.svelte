@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { getBallot, getCollection, putBallot, submitBallot } from '#lib/voter/api.ts';
-	import { getVoterCode } from '#lib/voter/identity.ts';
+	import { ApiError, getBallot, getCollection, putBallot, submitBallot } from '#lib/voter/api.ts';
+	import { clearVoterCode, getVoterCode } from '#lib/voter/identity.ts';
 	import { insertAtRank, MAX_RANKED, moveItem, unrank } from '#lib/voter/ranking.ts';
 	import type { Ballot, CollectionItem } from '#lib/voter/types.ts';
 	import Button from '#lib/voter/ui/Button.svelte';
@@ -198,7 +198,12 @@
 			}
 			items = loadedItems;
 			ballot = loadedBallot;
-		} catch {
+		} catch (e) {
+			if (e instanceof ApiError && e.code === 'unauthorized') {
+				clearVoterCode();
+				await goto('/?reason=invalid', { replaceState: true });
+				return;
+			}
 			error = 'Could not load your ballot. Check your connection and refresh.';
 		} finally {
 			loading = false;

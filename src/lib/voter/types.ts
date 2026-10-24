@@ -1,12 +1,11 @@
-// Shapes the voter screens work with.
-// These are a guess at Shaun's API. When his real responses are ready,
-// update these types and api.ts, and the screens should keep working.
+// Shapes the voter screens work with. They match what the API returns
+// (see src/routes/api/collection and src/routes/api/ballot).
 
 export interface Team {
   id: string;
   name: string;
-  table: string;
-  description: string;
+  /** Member names as typed in the form, e.g. "Ann Lee, Bob Kim". */
+  members: string;
 }
 
 /** A team the voter has scanned, plus their private note on it. */
@@ -22,12 +21,6 @@ export interface Ballot {
   ranked: string[];
   status: BallotStatus;
   submittedAt: string | null;
-}
-
-export interface Settings {
-  /** ISO timestamp when voting closes. */
-  closesAt: string;
-  closed: boolean;
 }
 
 /** What happened when a QR code was scanned. */
