@@ -41,6 +41,8 @@ export interface MyTeam {
 
 /** What happened when a voter tried to link a sticker with "Scan my team". */
 export type ClaimResult =
+  /** Only from the check before asking: the sticker is free and your team has none yet. */
+  | { kind: "can-link"; team: Team }
   | { kind: "claimed"; team: Team }
   | { kind: "already-yours"; team: Team }
   | { kind: "team-has-code"; team: Team }

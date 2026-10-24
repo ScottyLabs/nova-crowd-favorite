@@ -1,12 +1,17 @@
 import { unauthorized, voterEmail } from "../../../../lib/server/auth";
 import { db } from "../../../../lib/server/db";
-import { getQr, getTeam, voterTeam } from "../../../../lib/server/team";
+import { getQr, getTeam, type TeamSummary, voterTeam } from "../../../../lib/server/team";
 
-// POST /api/qr/claim -> link a printed QR sticker to the voter's own team ("Scan my team").
-// Body: { "code": "<qr code>" }. Needs `Authorization: Bearer <voter code>`.
+// "Scan my team": link a printed QR sticker to the voter's own team.
+// Both need `Authorization: Bearer <voter code>`.
+//
+// GET  /api/qr/claim?code=<qr code> -> check only, links nothing. Used before asking
+//      "Link this code?", so we only ask when linking can actually work.
+// POST /api/qr/claim  Body: { "code": "<qr code>" } -> link it.
 //
 // Responses (200 unless noted), matching Figma screens 2c/2d:
-//   { kind: "claimed", team }        linked now
+//   { kind: "can-link", team }       (GET only) free sticker, your team has none yet
+//   { kind: "claimed", team }        (POST only) linked now
 //   { kind: "already-yours", team }  this sticker was already linked to your team
 //   { kind: "team-has-code", team }  your team is linked to a different sticker
 //   { kind: "taken", team }          this sticker belongs to another team
@@ -40,6 +45,33 @@ function linkedResponse(stickerTeamId: string, myTeamId: string): Response {
   return Response.json({ kind: "taken", team });
 }
 
+/** The voter's team if this sticker can be linked to it, otherwise the response explaining why not. */
+function checkClaim(email: string, code: string): { team: TeamSummary } | Response {
+  const qr = getQr(code);
+  if (qr === null) return Response.json({ kind: "unknown-code" }, { status: 404 });
+
+  const mine = voterTeam(email);
+  if (mine === null) return Response.json({ kind: "no-team" });
+
+  if (qr.teamId !== null) return linkedResponse(qr.teamId, mine.team.id);
+  if (teamHasCode.get(mine.team.id) !== undefined) {
+    return Response.json({ kind: "team-has-code", team: mine.team });
+  }
+  return { team: mine.team };
+}
+
+export async function GET({ request, url }: { request: Request; url: URL }) {
+  const email = await voterEmail(request);
+  if (email === null) return unauthorized();
+
+  const code = url.searchParams.get("code") ?? "";
+  if (code.length === 0) return Response.json({ error: "missing ?code=" }, { status: 400 });
+
+  const check = checkClaim(email, code);
+  if (check instanceof Response) return check;
+  return Response.json({ kind: "can-link", team: check.team });
+}
+
 export async function POST({ request }: { request: Request }) {
   const email = await voterEmail(request);
   if (email === null) return unauthorized();
@@ -52,29 +84,22 @@ export async function POST({ request }: { request: Request }) {
   }
   if (!isClaimBody(body)) return Response.json({ error: "body must be { code }" }, { status: 400 });
 
-  const qr = getQr(body.code);
-  if (qr === null) return Response.json({ kind: "unknown-code" }, { status: 404 });
-
-  const mine = voterTeam(email);
-  if (mine === null) return Response.json({ kind: "no-team" });
-
-  if (qr.teamId !== null) return linkedResponse(qr.teamId, mine.team.id);
-  if (teamHasCode.get(mine.team.id) !== undefined) {
-    return Response.json({ kind: "team-has-code", team: mine.team });
-  }
+  const check = checkClaim(email, body.code);
+  if (check instanceof Response) return check;
+  const { team } = check;
 
   try {
-    const result = claim.run(mine.team.id, email, new Date().toISOString(), qr.code);
-    if (result.changes === 1) return Response.json({ kind: "claimed", team: mine.team });
+    const result = claim.run(team.id, email, new Date().toISOString(), body.code);
+    if (result.changes === 1) return Response.json({ kind: "claimed", team });
   } catch {
     // A teammate linked a different sticker at the same moment (team_id is UNIQUE).
-    return Response.json({ kind: "team-has-code", team: mine.team });
+    return Response.json({ kind: "team-has-code", team });
   }
 
   // Someone else linked this sticker between our check and the update.
-  const latest = getQr(qr.code);
+  const latest = getQr(body.code);
   if (latest === null || latest.teamId === null) {
     return Response.json({ error: "could not link this code, try again" }, { status: 500 });
   }
-  return linkedResponse(latest.teamId, mine.team.id);
+  return linkedResponse(latest.teamId, team.id);
 }

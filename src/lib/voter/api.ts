@@ -180,11 +180,9 @@ export async function getMyTeam(): Promise<MyTeam> {
   return { team: toTeam(data.team), linked: data.linked === true };
 }
 
-const CLAIM_KINDS = ["claimed", "already-yours", "team-has-code", "taken"] as const;
+const CLAIM_KINDS = ["can-link", "claimed", "already-yours", "team-has-code", "taken"] as const;
 
-/** POST /api/qr/claim  (body: the scanned QR code) */
-export async function claimQr(code: string): Promise<ClaimResult> {
-  const { status, data } = await send("POST", "/api/qr/claim", { code });
+function toClaimResult(status: number, data: unknown): ClaimResult {
   if (status === 404) return { kind: "unknown-code" };
   if (status !== 200) throw failure(status, data);
   if (!isRecord(data)) throw new ApiError("invalid", "Unexpected claim result from the server.");
@@ -195,4 +193,16 @@ export async function claimQr(code: string): Promise<ClaimResult> {
     throw new ApiError("invalid", "Unexpected claim result from the server.");
   }
   return { kind, team };
+}
+
+/** GET /api/qr/claim?code=...  Checks whether "Link to my team" would work. Links nothing. */
+export async function checkClaim(code: string): Promise<ClaimResult> {
+  const { status, data } = await send("GET", `/api/qr/claim?code=${encodeURIComponent(code)}`);
+  return toClaimResult(status, data);
+}
+
+/** POST /api/qr/claim  (body: the scanned QR code) */
+export async function claimQr(code: string): Promise<ClaimResult> {
+  const { status, data } = await send("POST", "/api/qr/claim", { code });
+  return toClaimResult(status, data);
 }

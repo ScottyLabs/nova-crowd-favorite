@@ -2,9 +2,9 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { ApiError, claimQr, getMyTeam } from '#lib/voter/api.ts';
+	import { ApiError, checkClaim, claimQr } from '#lib/voter/api.ts';
 	import { clearVoterCode, getVoterCode } from '#lib/voter/identity.ts';
-	import type { ClaimResult, MyTeam } from '#lib/voter/types.ts';
+	import type { ClaimResult } from '#lib/voter/types.ts';
 	import Button from '#lib/voter/ui/Button.svelte';
 	import Icon from '#lib/voter/ui/Icon.svelte';
 	import Screen from '#lib/voter/ui/Screen.svelte';
@@ -15,13 +15,12 @@
 
 	const code = $derived(page.params.code ?? '');
 
-	let myTeam = $state<MyTeam | null>(null);
 	let result = $state<ClaimResult | null>(null);
 	let working = $state(true);
 	let failed = $state(false);
 
 	/** The voter's team while we're asking "Link this code?", otherwise null. */
-	const askTeam = $derived(result === null && myTeam !== null ? myTeam.team : null);
+	const askTeam = $derived(result?.kind === 'can-link' ? result.team : null);
 
 	onMount(() => {
 		if (getVoterCode() === null) {
@@ -48,11 +47,10 @@
 		}
 	}
 
-	/** Ask first only when linking is possible. Otherwise show why right away (the server won't link it). */
+	/** Ask "Link this code?" only if linking will work. Otherwise show why right away. */
 	async function start(): Promise<void> {
 		await run(async () => {
-			myTeam = await getMyTeam();
-			if (myTeam.team === null || myTeam.linked) result = await claimQr(code);
+			result = await checkClaim(code);
 		});
 	}
 
@@ -74,7 +72,7 @@
 		<h1 class="title-md">Couldn't link this code</h1>
 		<p class="callout dark" role="alert">Check your connection and try again.</p>
 		<div class="spacer"></div>
-		<Button onclick={() => void (myTeam === null ? start() : link())}>Try again</Button>
+		<Button onclick={() => void (askTeam === null ? start() : link())}>Try again</Button>
 		<Button variant="secondary" href="/collection">View collection</Button>
 	{:else if askTeam !== null}
 		<h1 class="title-md">Link this code?</h1>
