@@ -4,10 +4,12 @@
 
 import { authHeaders } from "./identity.ts";
 import type { Ballot, ClaimResult, CollectionItem, MyTeam, ScanResult, Team } from "./types.ts";
+
 export type ApiErrorCode =
   | "unauthorized"
   | "not-found"
   | "already-submitted"
+  | "voting-closed"
   | "invalid"
   | "network";
 
@@ -54,6 +56,9 @@ function failure(status: number, data: unknown): ApiError {
   const message =
     isRecord(data) && typeof data.error === "string" ? data.error : "Something went wrong.";
   if (status === 401) return new ApiError("unauthorized", "This voting link does not work.");
+  if (status === 403 && isRecord(data) && data.kind === "voting-closed") {
+    return new ApiError("voting-closed", "Voting has closed.");
+  }
   if (status === 404) return new ApiError("not-found", message);
   if (status === 409) return new ApiError("already-submitted", message);
   return new ApiError("invalid", message);
@@ -99,6 +104,7 @@ function toBallot(value: unknown): Ballot {
     ranked,
     status: value.status,
     submittedAt: typeof value.submittedAt === "string" ? value.submittedAt : null,
+    votingClosed: value.votingClosed === true,
   };
 }
 

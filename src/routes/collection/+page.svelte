@@ -9,6 +9,7 @@
 		putBallot,
 		submitBallot
 	} from '#lib/voter/api.ts';
+	import { goToClosedIf } from '#lib/voter/closed.ts';
 	import { clearVoterCode, getVoterCode } from '#lib/voter/identity.ts';
 	import { insertAtRank, MAX_RANKED, moveItem, unrank } from '#lib/voter/ranking.ts';
 	import type { Ballot, CollectionItem, MyTeam } from '#lib/voter/types.ts';
@@ -203,6 +204,10 @@
 	async function load(): Promise<void> {
 		try {
 			const [loadedItems, loadedBallot] = await Promise.all([getCollection(), getBallot()]);
+			if (loadedBallot.votingClosed) {
+				await goto('/closed', { replaceState: true });
+				return;
+			}
 			if (loadedBallot.status === 'submitted') {
 				await goto('/submitted', { replaceState: true });
 				return;
@@ -238,7 +243,8 @@
 		error = null;
 		try {
 			ballot = await putBallot(next);
-		} catch {
+		} catch (e) {
+			if (await goToClosedIf(e)) return;
 			ballot = { ...ballot, ranked: previous };
 			error = 'Could not save your ranking. Try again.';
 		}
@@ -261,7 +267,8 @@
 		try {
 			await submitBallot();
 			await goto('/submitted', { replaceState: true });
-		} catch {
+		} catch (e) {
+			if (await goToClosedIf(e)) return;
 			error = 'Could not submit your ballot. Try again.';
 			confirming = false;
 		} finally {

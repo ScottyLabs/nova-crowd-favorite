@@ -21,6 +21,8 @@ export interface Ballot {
   ranked: string[];
   status: BallotStatus;
   submittedAt: string | null;
+  /** True after the organizers' close time. The app then shows "Voting closed". */
+  votingClosed: boolean;
 }
 
 /** What happened when a QR code was scanned. */
@@ -28,7 +30,7 @@ export type ScanResult =
   | { kind: "added"; team: Team; count: number }
   | { kind: "already"; team: Team; count: number }
   | { kind: "own-team"; team: Team }
-  /* A sticker that has never been linked to a team. */
+  /** A printed sticker no team has linked yet. Scanning it never links it. */
   | { kind: "unlinked" }
   | { kind: "unknown-code" };
 

@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { addByQr, ApiError, getMyTeam } from '#lib/voter/api.ts';
+	import { goToClosedIf } from '#lib/voter/closed.ts';
 	import { clearVoterCode, getVoterCode } from '#lib/voter/identity.ts';
 	import type { ScanResult } from '#lib/voter/types.ts';
 	import Button from '#lib/voter/ui/Button.svelte';
@@ -41,6 +42,7 @@
 			}
 			result = scanned;
 		} catch (e) {
+			if (await goToClosedIf(e)) return;
 			if (e instanceof ApiError && e.code === 'unauthorized') {
 				clearVoterCode();
 				await goto('/?reason=invalid', { replaceState: true });

@@ -26,6 +26,10 @@
 	async function load(): Promise<void> {
 		try {
 			const [loadedBallot, items] = await Promise.all([getBallot(), getCollection()]);
+			if (loadedBallot.votingClosed) {
+				await goto('/closed', { replaceState: true });
+				return;
+			}
 			if (loadedBallot.status !== 'submitted') {
 				await goto('/collection', { replaceState: true });
 				return;
