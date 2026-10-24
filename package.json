@@ -15,6 +15,9 @@
     "lint": "prek run oxlint --all-files",
     "format": "treefmt"
   },
+  "dependencies": {
+    "jsqr": "1.4.0"
+  },
   "devDependencies": {
     "@sveltejs/adapter-node": "^6.0.0",
     "@sveltejs/kit": "^3.0.0",

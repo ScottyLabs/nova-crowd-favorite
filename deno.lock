@@ -6,6 +6,7 @@
     "npm:@sveltejs/kit@3": "3.0.1_@sveltejs+vite-plugin-svelte@7.3.1_svelte@5.57.2_typescript@6.0.3_vite@8.3.4_@types+node@24.19.2",
     "npm:@sveltejs/vite-plugin-svelte@^7.2.0": "7.3.1_svelte@5.57.2_vite@8.3.4_@types+node@24.19.2",
     "npm:@types/node@24": "24.19.2",
+    "npm:jsqr@1.4.0": "1.4.0",
     "npm:svelte-check@*": "4.7.6_svelte@5.57.2_typescript@6.0.3",
     "npm:svelte-check@^4.6.0": "4.7.6_svelte@5.57.2_typescript@6.0.3",
     "npm:svelte@^5.57.1": "5.57.2",
@@ -243,6 +244,9 @@
       "dependencies": [
         "@types/estree"
       ]
+    },
+    "jsqr@1.4.0": {
+      "integrity": "sha512-dxLob7q65Xg2DvstYkRpkYtmKm2sPJ9oFhrhmudT1dZvNFFTlroai3AWSpLey/w5vMcLBXRgOJsbXpdN9HzU/A=="
     },
     "lightningcss-android-arm64@1.33.0": {
       "integrity": "sha512-gEpRTalKdosp4Bb8qWtc2iOgE5SeIHlpS1up9bFq2wAyYhl1UdTObYiHe98zEM9SQvSoqQZ1IQD0JNpg3Ml5pg==",
@@ -494,6 +498,7 @@
         "npm:@sveltejs/kit@3",
         "npm:@sveltejs/vite-plugin-svelte@^7.2.0",
         "npm:@types/node@24",
+        "npm:jsqr@1.4.0",
         "npm:svelte-check@^4.6.0",
         "npm:svelte@^5.57.1",
         "npm:typescript@^6.0.3",
