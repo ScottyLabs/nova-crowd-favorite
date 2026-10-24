@@ -282,7 +282,6 @@
 						<RankRow
 							rank={previewOrder.indexOf(teamId) + 1}
 							team={item.team}
-							hasNote={item.note.length > 0}
 							href="/team/{teamId}"
 							offset={offsetFor(teamId, i)}
 							lifted={drag?.id === teamId}
@@ -323,7 +322,6 @@
 						<li>
 							<TeamRow
 								team={item.team}
-								hasNote={item.note.length > 0}
 								href="/team/{item.team.id}"
 								canAdd={!full}
 								onadd={() => {

@@ -1,29 +1,22 @@
 <script lang="ts">
 	import type { Team } from '../types.ts';
-	import Icon from './Icon.svelte';
 
 	// A collected team that is not in the top 5 (Figma "TeamRow").
 	// Tapping the row opens the team page; the chip adds it to the top 5.
 
 	interface Props {
 		team: Team;
-		hasNote: boolean;
 		href: string;
 		canAdd: boolean;
 		onadd: () => void;
 	}
 
-	let { team, hasNote, href, canAdd, onadd }: Props = $props();
+	let { team, href, canAdd, onadd }: Props = $props();
 </script>
 
 <div class="row glass">
 	<a class="main" {href}>
-		<span class="name">
-			{team.name}
-			{#if hasNote}
-				<span class="note-mark"><Icon name="pencil" size={12} label="Has a note" /></span>
-			{/if}
-		</span>
+		<span class="name">{team.name}</span>
 		<span class="meta">{team.members}</span>
 	</a>
 	<button class="chip" type="button" disabled={!canAdd} onclick={onadd}>

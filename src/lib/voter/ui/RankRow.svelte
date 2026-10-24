@@ -55,12 +55,7 @@
 			{rank === 0 ? '-' : rank}
 		</span>
 		<span class="text">
-			<span class="name">
-				{team.name}
-				{#if hasNote}
-					<span class="note-mark"><Icon name="pencil" size={12} label="Has a note" /></span>
-				{/if}
-			</span>
+			<span class="name">{team.name}</span>
 			<span class="meta">{team.members}</span>
 		</span>
 	</a>
@@ -133,13 +128,7 @@
 		text-overflow: ellipsis;
 	}
 	.name {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		font-size: 15px;
-	}
-	.note-mark {
-		color: var(--muted);
+		font-size; 15px;
 	}
 	.meta {
 		font-size: 11px;
