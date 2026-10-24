@@ -1,13 +1,15 @@
 import { dev } from "$app/env";
 import { db } from "../../../../lib/server/db";
 import { hashCode } from "../../../../lib/server/voter-code";
+import { CLOSES_AT_KEY } from "../../../../lib/server/voting";
 
 // DEV ONLY: open http://localhost:5173/api/dev/seed while running `deno task dev`.
 // Fills the local database with test teams, QR codes and a test voter, then sends
 // you to that voter's link. The voter's own team ("Own Team") starts unlinked, and
 // stickers qr-dev-new-1 and qr-dev-new-2 are free to link with "Scan my team".
+// Test "Voting closed": /api/dev/seed?closed (no ballot submitted)
+// or /api/dev/seed?closed=submitted (ballot submitted before the close).
 // Returns 404 in production builds, so it can't touch the real event database.
-// the real event database.
 
 const VOTER_EMAIL = "dev-voter@example.com";
 const VOTER_CODE = "dev-voter-code-0001";
@@ -21,7 +23,25 @@ const TEAMS: [string, string, string][] = [
   ["dev-t6", "Hum2Track", "Ivy Cho"],
 ];
 
-export async function GET() {
+/** Voting is open unless ?closed is in the URL (then it closed a minute ago). */
+function seedVotingClosed(url: URL, now: string): void {
+  if (!url.searchParams.has("closed")) {
+    db.prepare("DELETE FROM settings WHERE key = ?").run(CLOSES_AT_KEY);
+    return;
+  }
+  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(
+    CLOSES_AT_KEY,
+    new Date(Date.now() - 60_000).toISOString(),
+  );
+  if (url.searchParams.get("closed") === "submitted") {
+    db.prepare(`
+      INSERT INTO ballots (voter_email, rank_1, rank_2, status, submitted_at)
+      VALUES (?, 'dev-t4', 'dev-t2', 'submitted', ?)
+    `).run(VOTER_EMAIL, now);
+  }
+}
+
+export async function GET({ url }: { url: URL }) {
   if (!dev) return new Response("Not found", { status: 404 });
 
   const now = new Date().toISOString();
@@ -51,7 +71,6 @@ export async function GET() {
   db.prepare(
     "INSERT OR IGNORE INTO qr_codes (code) VALUES ('qr-dev-new-1'), ('qr-dev-new-2')",
   ).run();
-
   db.prepare("INSERT OR IGNORE INTO team_members (team_id, email) VALUES (?, ?)").run(
     "dev-t1",
     VOTER_EMAIL,
@@ -65,6 +84,8 @@ export async function GET() {
   db.prepare("DELETE FROM collections WHERE voter_email = ?").run(VOTER_EMAIL);
   db.prepare("DELETE FROM ballots WHERE voter_email = ?").run(VOTER_EMAIL);
   for (const [id] of TEAMS.slice(1)) collect.run(VOTER_EMAIL, id, now);
+
+  seedVotingClosed(url, now);
 
   return new Response(null, { status: 303, headers: { location: `/v/${VOTER_CODE}` } });
 }

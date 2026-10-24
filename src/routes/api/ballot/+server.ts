@@ -1,9 +1,11 @@
 import { unauthorized, voterEmail } from "../../../lib/server/auth";
 import { getBallot, MAX_RANKED } from "../../../lib/server/ballot";
 import { db } from "../../../lib/server/db";
+import { isVotingClosed, votingClosedResponse } from "../../../lib/server/voting";
 
 // GET /api/ballot -> { ranked: [teamId, ...], status, submittedAt }
 // PUT /api/ballot -> save the draft ranking. Body: { "ranked": [teamId, ...] } (best first)
+//   403 { kind: "voting-closed" } after voting closes.
 // Both need `Authorization: Bearer <voter code>`.
 
 const collectedTeams = db.prepare(`
@@ -63,6 +65,7 @@ export async function GET({ request }: { request: Request }) {
 export async function PUT({ request }: { request: Request }) {
   const email = await voterEmail(request);
   if (email === null) return unauthorized();
+  if (isVotingClosed()) return votingClosedResponse();
 
   let body: unknown;
   try {

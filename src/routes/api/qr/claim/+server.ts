@@ -1,6 +1,7 @@
 import { unauthorized, voterEmail } from "../../../../lib/server/auth";
 import { db } from "../../../../lib/server/db";
 import { getQr, getTeam, type TeamSummary, voterTeam } from "../../../../lib/server/team";
+import { isVotingClosed, votingClosedResponse } from "../../../../lib/server/voting";
 
 // "Scan my team": link a printed QR sticker to the voter's own team.
 // Both need `Authorization: Bearer <voter code>`.
@@ -17,6 +18,7 @@ import { getQr, getTeam, type TeamSummary, voterTeam } from "../../../../lib/ser
 //   { kind: "taken", team }          this sticker belongs to another team
 //   { kind: "no-team" }              your email is not on any team
 //   404 { kind: "unknown-code" }     not one of our stickers
+//   403 { kind: "voting-closed" }    after voting closes
 
 // Only links a sticker that is still free, so two people can't both claim it.
 const claim = db.prepare(`
@@ -63,6 +65,7 @@ function checkClaim(email: string, code: string): { team: TeamSummary } | Respon
 export async function GET({ request, url }: { request: Request; url: URL }) {
   const email = await voterEmail(request);
   if (email === null) return unauthorized();
+  if (isVotingClosed()) return votingClosedResponse();
 
   const code = url.searchParams.get("code") ?? "";
   if (code.length === 0) return Response.json({ error: "missing ?code=" }, { status: 400 });
@@ -75,6 +78,7 @@ export async function GET({ request, url }: { request: Request; url: URL }) {
 export async function POST({ request }: { request: Request }) {
   const email = await voterEmail(request);
   if (email === null) return unauthorized();
+  if (isVotingClosed()) return votingClosedResponse();
 
   let body: unknown;
   try {

@@ -1,12 +1,13 @@
 import { unauthorized, voterEmail } from "../../../lib/server/auth";
 import { db } from "../../../lib/server/db";
 import { getQr, toTeam } from "../../../lib/server/team";
+import { isVotingClosed, votingClosedResponse } from "../../../lib/server/voting";
 
 // GET  /api/collection  -> the voter's collected teams, with their private notes
 // POST /api/collection  -> add a team by its QR code ("Scan a team"). Body: { "code": "<qr code>" }
 //   -> { kind: "added" | "already", team, count }, { kind: "own-team", team },
 //      { kind: "unlinked" } for a sticker no team has linked yet (never claims it),
-//      or 404 { kind: "unknown-code" }
+//      404 { kind: "unknown-code" }, or 403 { kind: "voting-closed" } after voting closes
 // Both need the header `Authorization: Bearer <voter code>`.
 
 const selectCollection = db.prepare(`
@@ -63,6 +64,7 @@ export async function GET({ request }: { request: Request }) {
 export async function POST({ request }: { request: Request }) {
   const email = await voterEmail(request);
   if (email === null) return unauthorized();
+  if (isVotingClosed()) return votingClosedResponse();
 
   let body: unknown;
   try {
