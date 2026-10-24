@@ -3,8 +3,7 @@
 // Each request sends the voter code as `Authorization: Bearer <code>`.
 
 import { authHeaders } from "./identity.ts";
-import type { Ballot, CollectionItem, ScanResult, Team } from "./types.ts";
-
+import type { Ballot, ClaimResult, CollectionItem, MyTeam, ScanResult, Team } from "./types.ts";
 export type ApiErrorCode =
   | "unauthorized"
   | "not-found"
@@ -132,6 +131,7 @@ export async function addByQr(code: string): Promise<ScanResult> {
   const { status, data } = await send("POST", "/api/collection", { code });
   if (status === 404) return { kind: "unknown-code" };
   if (status !== 200 && status !== 201) throw failure(status, data);
+  if (isRecord(data) && data.kind === "unlinked") return { kind: "unlinked" };
   const team = isRecord(data) ? toTeam(data.team) : null;
   if (!isRecord(data) || team === null) {
     throw new ApiError("invalid", "Unexpected scan result from the server.");
@@ -170,4 +170,29 @@ export async function submitBallot(): Promise<Ballot> {
   const { status, data } = await send("POST", "/api/ballot/submit");
   if (status !== 200) throw failure(status, data);
   return toBallot(data);
+}
+
+/** GET /api/my-team */
+export async function getMyTeam(): Promise<MyTeam> {
+  const { status, data } = await send("GET", "/api/my-team");
+  if (status !== 200) throw failure(status, data);
+  if (!isRecord(data)) throw new ApiError("invalid", "Unexpected team from the server.");
+  return { team: toTeam(data.team), linked: data.linked === true };
+}
+
+const CLAIM_KINDS = ["claimed", "already-yours", "team-has-code", "taken"] as const;
+
+/** POST /api/qr/claim  (body: the scanned QR code) */
+export async function claimQr(code: string): Promise<ClaimResult> {
+  const { status, data } = await send("POST", "/api/qr/claim", { code });
+  if (status === 404) return { kind: "unknown-code" };
+  if (status !== 200) throw failure(status, data);
+  if (!isRecord(data)) throw new ApiError("invalid", "Unexpected claim result from the server.");
+  if (data.kind === "no-team") return { kind: "no-team" };
+  const team = toTeam(data.team);
+  const kind = CLAIM_KINDS.find((k) => k === data.kind);
+  if (kind === undefined || team === null) {
+    throw new ApiError("invalid", "Unexpected claim result from the server.");
+  }
+  return { kind, team };
 }

@@ -1,12 +1,20 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { ApiError, getBallot, getCollection, putBallot, submitBallot } from '#lib/voter/api.ts';
+	import {
+		ApiError,
+		getBallot,
+		getCollection,
+		getMyTeam,
+		putBallot,
+		submitBallot
+	} from '#lib/voter/api.ts';
 	import { clearVoterCode, getVoterCode } from '#lib/voter/identity.ts';
 	import { insertAtRank, MAX_RANKED, moveItem, unrank } from '#lib/voter/ranking.ts';
-	import type { Ballot, CollectionItem } from '#lib/voter/types.ts';
+	import type { Ballot, CollectionItem, MyTeam } from '#lib/voter/types.ts';
 	import Button from '#lib/voter/ui/Button.svelte';
 	import EmptySlot from '#lib/voter/ui/EmptySlot.svelte';
+	import LinkTeamBanner from '#lib/voter/ui/LinkTeamBanner.svelte';
 	import Icon from '#lib/voter/ui/Icon.svelte';
 	import RankRow from '#lib/voter/ui/RankRow.svelte';
 	import Screen from '#lib/voter/ui/Screen.svelte';
@@ -20,6 +28,8 @@
 	let error = $state<string | null>(null);
 	let confirming = $state(false);
 	let submitting = $state(false);
+	let myTeam = $state<MyTeam | null>(null);
+	const showLinkBanner = $derived(myTeam !== null && myTeam.team !== null && !myTeam.linked);
 
 	const byId = $derived(new Map(items.map((item) => [item.team.id, item])));
 	const ranked = $derived((ballot?.ranked ?? []).filter((id) => byId.has(id)));
@@ -187,6 +197,7 @@
 			return;
 		}
 		void load();
+		void loadMyTeam();
 	});
 
 	async function load(): Promise<void> {
@@ -207,6 +218,15 @@
 			error = 'Could not load your ballot. Check your connection and refresh.';
 		} finally {
 			loading = false;
+		}
+	}
+
+	/** The banner is optional, so if this fails the page just doesn't show it. */
+	async function loadMyTeam(): Promise<void> {
+		try {
+			myTeam = await getMyTeam();
+		} catch {
+			myTeam = null;
 		}
 	}
 
@@ -259,6 +279,10 @@
 		<h1 class="title-md">Your top 5</h1>
 		<span class="pill">Draft</span>
 	</div>
+
+	{#if showLinkBanner}
+		<LinkTeamBanner />
+	{/if}
 
 	{#if loading}
 		<p class="small">Loading your ballot...</p>

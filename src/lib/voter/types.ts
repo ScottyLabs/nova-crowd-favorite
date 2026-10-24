@@ -28,6 +28,24 @@ export type ScanResult =
   | { kind: "added"; team: Team; count: number }
   | { kind: "already"; team: Team; count: number }
   | { kind: "own-team"; team: Team }
+  /* A sticker that has never been linked to a team. */
+  | { kind: "unlinked" }
+  | { kind: "unknown-code" };
+
+/** The voter's own team, and whether it has a QR sticker linked yet. */
+export interface MyTeam {
+  /** Null for voters who are not on a team (judges, organizers). */
+  team: Team | null;
+  linked: boolean;
+}
+
+/** What happened when a voter tried to link a sticker with "Scan my team". */
+export type ClaimResult =
+  | { kind: "claimed"; team: Team }
+  | { kind: "already-yours"; team: Team }
+  | { kind: "team-has-code"; team: Team }
+  | { kind: "taken"; team: Team }
+  | { kind: "no-team" }
   | { kind: "unknown-code" };
 
 export { MAX_RANKED } from "./ranking.ts";
