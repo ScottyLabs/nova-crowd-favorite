@@ -4,7 +4,9 @@ import { hashCode } from "../../../../lib/server/voter-code";
 
 // DEV ONLY: open http://localhost:5173/api/dev/seed while running `deno task dev`.
 // Fills the local database with test teams, QR codes and a test voter, then sends
-// you to that voter's link. Returns 404 in production builds, so it can't touch
+// you to that voter's link. The voter's own team ("Own Team") starts unlinked, and
+// stickers qr-dev-new-1 and qr-dev-new-2 are free to link with "Scan my team".
+// Returns 404 in production builds, so it can't touch the real event database.
 // the real event database.
 
 const VOTER_EMAIL = "dev-voter@example.com";
@@ -38,8 +40,18 @@ export async function GET() {
 
   for (const [id, name, members] of TEAMS) {
     upsertTeam.run(id, `dev-response-${id}`, name, members, now);
-    upsertQr.run(`qr-${id}`, id);
   }
+  // Unlink every dev sticker first, so relinking below can't hit the one-code-per-team rule.
+  db.prepare(`
+    UPDATE qr_codes SET team_id = NULL, claimed_by = NULL, claimed_at = NULL
+    WHERE code LIKE 'qr-dev-%'
+  `).run();
+  for (const [id] of TEAMS.slice(1)) upsertQr.run(`qr-${id}`, id);
+  db.prepare("DELETE FROM qr_codes WHERE code = 'qr-dev-t1'").run();
+  db.prepare(
+    "INSERT OR IGNORE INTO qr_codes (code) VALUES ('qr-dev-new-1'), ('qr-dev-new-2')",
+  ).run();
+
   db.prepare("INSERT OR IGNORE INTO team_members (team_id, email) VALUES (?, ?)").run(
     "dev-t1",
     VOTER_EMAIL,

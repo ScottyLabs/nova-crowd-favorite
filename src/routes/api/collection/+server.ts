@@ -1,15 +1,13 @@
 import { unauthorized, voterEmail } from "../../../lib/server/auth";
 import { db } from "../../../lib/server/db";
+import { getQr, toTeam } from "../../../lib/server/team";
 
 // GET  /api/collection  -> the voter's collected teams, with their private notes
-// POST /api/collection  -> add a team by its QR code. Body: { "code": "<qr code>" }
+// POST /api/collection  -> add a team by its QR code ("Scan a team"). Body: { "code": "<qr code>" }
+//   -> { kind: "added" | "already", team, count }, { kind: "own-team", team },
+//      { kind: "unlinked" } for a sticker no team has linked yet (never claims it),
+//      or 404 { kind: "unknown-code" }
 // Both need the header `Authorization: Bearer <voter code>`.
-
-interface TeamSummary {
-  id: string;
-  name: string;
-  members: string;
-}
 
 const selectCollection = db.prepare(`
   SELECT teams.id, teams.name, teams.members, collections.note
@@ -50,15 +48,6 @@ function isScanBody(value: unknown): value is { code: string } {
   );
 }
 
-function toTeam(row: Record<string, unknown>): TeamSummary | null {
-  if (typeof row.id !== "string" || typeof row.name !== "string") return null;
-  return {
-    id: row.id,
-    name: row.name,
-    members: typeof row.members === "string" ? row.members : "",
-  };
-}
-
 export async function GET({ request }: { request: Request }) {
   const email = await voterEmail(request);
   if (email === null) return unauthorized();
@@ -82,6 +71,10 @@ export async function POST({ request }: { request: Request }) {
     return Response.json({ error: "invalid JSON" }, { status: 400 });
   }
   if (!isScanBody(body)) return Response.json({ error: "body must be { code }" }, { status: 400 });
+
+  const qr = getQr(body.code);
+  if (qr === null) return Response.json({ kind: "unknown-code" }, { status: 404 });
+  if (qr.teamId === null) return Response.json({ kind: "unlinked" });
 
   const row = selectTeamByQr.get(body.code);
   const team = row === undefined ? null : toTeam(row);
