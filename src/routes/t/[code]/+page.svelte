@@ -94,7 +94,7 @@
 		<div class="spacer"></div>
 		<Button href="/team/{result.team.id}">Add a note</Button>
 		<Button variant="secondary" href="/collection">View collection</Button>
-		<p class="tiny">Keep scanning with your phone camera.</p>
+		<Button variant="secondary" href="/scan">Scan another team</Button>
 	{:else if result.kind === 'own-team'}
 		<p class="kicker">Scanned</p>
 		<h1 class="title-md">{result.team.name}</h1>
