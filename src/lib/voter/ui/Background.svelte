@@ -128,10 +128,13 @@
 
 	const config = $derived(GROUPS[group]);
 	const edge = $derived(EDGE[group]);
-	// Sent in the page's HTML from the server, so the phone browser has the right
-	// color the moment the page loads (it may pick its bar colors before any script runs).
-	const edgeStyle = $derived(`<style>html:root,html body{background-color:${edge}}</style>`);
 	const washes = $derived(config.washes.map(washToGradient).join(', '));
+	// The same gradient also goes on the page itself (html), sent in the page's HTML from
+	// the server. Phone Safari paints the page's own background in places it won't draw
+	// the pinned layer: behind its bottom toolbar and the strip behind the clock.
+	const edgeStyle = $derived(
+		`<style>html:root{background-color:${edge};background-image:${HAZE},${washes};background-position:-50vw -50lvh;background-size:200vw 200lvh;background-repeat:no-repeat}html body{background:transparent}</style>`
+	);
 
 	// 8-point star, inner radius 0.16 (same as the Figma shards)
 	const STAR =
