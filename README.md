@@ -1,57 +1,69 @@
 # Nova Crowd Favorite
 
-Crowd favorite voting app for Nova, built with SvelteKit and SQLite.
+<https://crowd-favorite.nova.scottylabs.org>
 
-## Development
+## Organizer commands
 
-Log in to OpenBao and set up devenv by following kennel's [local development](https://docs.kennel.scottylabs.org/guides/secrets.html#local-development) and [devenv setup](https://docs.kennel.scottylabs.org/guides/deploying.html#2-set-up-devenv) guides.
-
-Run the dev server with hot reloading:
-
-```sh
-devenv up
-```
-
-The app runs at <http://localhost:5173>. The shell provides Deno, installs dependencies, and sets `DATABASE_PATH` to a local SQLite database.
+Run from this repository with Deno installed and the production
+`SYNC_HMAC_SECRET` loaded from OpenBao. The commands sign requests and update
+the deployed app.
 
 ```sh
-deno task check
-prek run --all-files
-deno task build
+export APP_URL=https://crowd-favorite.nova.scottylabs.org
+
+# Add voters and print their personal voting links.
+deno task organizer voters person@example.com other@example.com
+
+# Generate and register 50 stickers; print their codes and QR URLs.
+deno task organizer qr 50
+
+# Register codes that are already printed.
+deno task organizer register-qr sticker-001 sticker-002
+
+# Set the closing time, including the timezone.
+deno task organizer close '2026-11-08T13:00:00-05:00'
+
+# Reopen voting without unlocking submitted ballots.
+deno task organizer open
 ```
 
-## Deployment
+Send voter links privately; the command does not send email. Existing voters
+are rejected without changing their links.
+A voter can rank up to five teams, and submitting is final.
 
-Configured for deployment through [Kennel](https://git.cmu.dev/ScottyLabs/kennel) as the `web` service, with persistent SQLite storage and isolated PR previews.
+Print each sticker as a QR containing its returned URL (`/t/<code>`).
+A team member opens their voter link and uses "Scan my team" to claim one
+sticker. Their email must match a team member email in the Sheet.
 
-[devenv.nix](./devenv.nix) defines the service and resources. [flake.nix](./flake.nix) defines the production package.
+## Sync teams
 
-## Testing the voter flow
+In the submission Sheet, open **Extensions > Apps Script** and paste
+[scripts/apps-script.gs](scripts/apps-script.gs). Under **Project Settings >
+Script Properties**, set:
 
-Open `/api/dev/seed` locally or on a PR preview to create demo teams, stickers,
-and a voter link. Each visit resets the demo ballot and collection. This endpoint
-returns 404 on event deployments.
+| Property | Value |
+| --- | --- |
+| `SYNC_URL` | `https://crowd-favorite.nova.scottylabs.org/api/sync` |
+| `SYNC_HMAC_SECRET` | Production secret from OpenBao |
+| `SHEET_NAME` | Submission tab name |
 
-- `/api/dev/seed?closed`: voting closed.
-- `/api/dev/seed?closed=submitted`: ballot submitted before closing.
-- `/api/dev/seed`: reset and reopen voting.
+Run `pushToApp`, authorize it, and add a recurring time-driven trigger.
+Use headers `Timestamp`, `Team Name`, `Team Members`, and `Team Emails`.
+Sync sends the whole Sheet: missing teams become inactive. Changing a team's
+name or timestamp creates a new team identity.
 
-For phone camera testing, use the HTTPS preview and a QR containing
-`https://<preview-host>/t/qr-dev-t3`. Use `qr-dev-new-1` or `qr-dev-new-2`
-to test linking an unclaimed sticker to your team.
+## Organizer API
 
-The type-check hook runs `deno task check` with the locked project dependencies.
-For Svelte declaration errors, try `deno install --frozen` and `deno task check`.
-If the error persists, remove `node_modules` and `.svelte-kit`, then repeat.
+All requests use the same HMAC headers as team sync; the
+[organizer command](scripts/organizer.ts) handles signing. Responses containing
+voter links are private and must not be shared publicly.
 
-## Event QR stickers
+| Method | Endpoint | JSON body |
+| --- | --- | --- |
+| POST | `/api/organizer/voters` | `{"emails":["person@example.com"]}` |
+| POST | `/api/organizer/qr-codes` | `{"codes":["sticker-001","sticker-002"]}` |
+| PUT | `/api/organizer/voting` | `{"closesAt":"2026-11-08T13:00:00-05:00"}` or `{"closesAt":null}` |
 
-Print `https://<event-site>/t/<code>` using a unique code per sticker
-(e.g. `openssl rand -hex 16`). Insert each code into the event database:
-
-```sql
-INSERT INTO qr_codes (code) VALUES ('replace-with-the-printed-code');
-```
-
-Leave `team_id` null so a team member can claim it through "Scan my team".
-Use plain `INSERT`; `INSERT OR REPLACE` can erase an existing claim.
+Voter and sticker batches accept up to 1,000 entries. Registering an existing
+sticker preserves its team claim. A past deadline closes voting immediately;
+`null` reopens it. Only submitted ballots count; there is no results screen.

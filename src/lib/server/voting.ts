@@ -1,13 +1,8 @@
 import { db } from "./db";
 
-// When crowd favorite voting closes. Organizers set it in the settings table:
-//   INSERT OR REPLACE INTO settings (key, value)
-//   VALUES ('voting_closes_at', '2026-11-08T13:00:00-05:00');
-// No row means voting is open. After that time the server refuses changes to
-// ballots and collections, and the app shows "Voting closed" (Figma screen 6).
-
 export const CLOSES_AT_KEY = "voting_closes_at";
 
+// Organizers set the deadline through /api/organizer/voting.
 const selectClosesAt = db.prepare("SELECT value FROM settings WHERE key = ?");
 
 /** True once the close time has passed. A missing or unreadable time leaves voting open. */

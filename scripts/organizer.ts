@@ -1,0 +1,75 @@
+import process from "node:process";
+
+const [command, ...args] = process.argv.slice(2);
+const site = process.env.APP_URL;
+if (site === undefined || site.length === 0) {
+  throw new Error("Set APP_URL to the deployment you want to update");
+}
+const secret = process.env.SYNC_HMAC_SECRET;
+if (secret === undefined || secret.length === 0) {
+  throw new Error("Load the target deployment's SYNC_HMAC_SECRET before running this command");
+}
+
+let path: string;
+let method = "POST";
+let payload: unknown;
+switch (command) {
+  case "voters":
+    if (args.length === 0) throw new Error("Usage: deno task organizer voters EMAIL...");
+    path = "/api/organizer/voters";
+    payload = { emails: args };
+    break;
+  case "qr": {
+    const count = Number(args[0]);
+    if (args.length !== 1 || !Number.isInteger(count) || count < 1 || count > 1000) {
+      throw new Error("Usage: deno task organizer qr COUNT (1-1000)");
+    }
+    path = "/api/organizer/qr-codes";
+    payload = { codes: Array.from({ length: count }, () => crypto.randomUUID()) };
+    break;
+  }
+  case "register-qr":
+    if (args.length === 0) throw new Error("Usage: deno task organizer register-qr CODE...");
+    path = "/api/organizer/qr-codes";
+    payload = { codes: args };
+    break;
+  case "close":
+  case "open":
+    if ((command === "close" && args.length !== 1) || (command === "open" && args.length > 0)) {
+      throw new Error("Usage: deno task organizer close ISO_TIMESTAMP | open");
+    }
+    path = "/api/organizer/voting";
+    method = "PUT";
+    payload = { closesAt: command === "open" ? null : args[0] };
+    break;
+  default:
+    throw new Error(
+      "Usage: deno task organizer voters EMAIL... | qr COUNT | register-qr CODE... | close ISO_TIMESTAMP | open",
+    );
+}
+
+const body = JSON.stringify(payload);
+const timestamp = String(Date.now());
+const enc = new TextEncoder();
+const key = await crypto.subtle.importKey(
+  "raw",
+  enc.encode(secret),
+  { name: "HMAC", hash: "SHA-256" },
+  false,
+  ["sign"],
+);
+const signature = new Uint8Array(
+  await crypto.subtle.sign("HMAC", key, enc.encode(`${timestamp}.${body}`)),
+);
+const response = await fetch(new URL(path, site), {
+  method,
+  headers: {
+    "content-type": "application/json",
+    "x-timestamp": timestamp,
+    "x-signature": Array.from(signature, (byte) => byte.toString(16).padStart(2, "0")).join(""),
+  },
+  body,
+});
+const result: unknown = await response.json();
+if (!response.ok) throw new Error(`HTTP ${response.status}: ${JSON.stringify(result)}`);
+console.log(JSON.stringify(result, null, 2));

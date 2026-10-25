@@ -13,7 +13,8 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "lint": "prek run oxlint --all-files",
-    "format": "treefmt"
+    "format": "treefmt",
+    "organizer": "deno run --allow-env=APP_URL,SYNC_HMAC_SECRET --allow-net scripts/organizer.ts"
   },
   "dependencies": {
     "jsqr": "1.4.0"
