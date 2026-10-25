@@ -86,6 +86,18 @@
 		}
 	};
 
+	// One flat color per group, between the colors at the top and bottom edges.
+	// Phone browsers paint this behind the status bar and toolbars (Safari tints its bars
+	// from the page's background color, Chrome on Android uses theme-color), so the
+	// bars match the screen instead of showing a gray strip.
+	const EDGE: Record<BackgroundGroup, string> = {
+		intro: '#c8c4d9',
+		scan: '#d9c0c3',
+		rating: '#e5dce6',
+		ballot: '#e1d5dd',
+		submission: '#cbc8d7'
+	};
+
 	const W = 390;
 	const H = 844;
 
@@ -101,6 +113,12 @@
 	}
 
 	const config = $derived(GROUPS[group]);
+	const edge = $derived(EDGE[group]);
+
+	$effect(() => {
+		document.documentElement.style.backgroundColor = edge;
+		document.body.style.backgroundColor = edge;
+	});
 	const washes = $derived(config.washes.map(washToGradient).join(', '));
 
 	// 8-point star, inner radius 0.16 (same as the Figma shards)
@@ -108,7 +126,11 @@
 		'50,0 53.1,42.6 85.4,14.6 57.4,46.9 100,50 57.4,53.1 85.4,85.4 53.1,57.4 50,100 46.9,57.4 14.6,85.4 42.6,53.1 0,50 42.6,46.9 14.6,14.6 46.9,42.6';
 </script>
 
-<div class="bg" aria-hidden="true">
+<svelte:head>
+	<meta name="theme-color" content={edge} />
+</svelte:head>
+
+<div class="bg" aria-hidden="true" style:background-color={edge}>
 	<div class="washes" style:background-image={washes}></div>
 	<div class="haze"></div>
 	{#each config.shards as [x, y, size, rot], i (i)}
@@ -144,6 +166,7 @@
 		top: 0;
 		bottom: 0;
 		left: 50%;
+		/* Phones: cover the area behind the browser's toolbars too, not just the visible part. */
 		min-height: 100lvh;
 		width: min(100%, var(--app-width));
 		transform: translateX(-50%);

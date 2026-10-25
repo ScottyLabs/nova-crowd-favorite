@@ -14,7 +14,6 @@
 		rel="stylesheet"
 		href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Michroma&display=swap"
 	/>
-	<meta name="theme-color" content="#d9dddf" />
 </svelte:head>
 
 {@render children()}
