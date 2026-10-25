@@ -163,13 +163,10 @@
 <style>
 	.bg {
 		position: fixed;
-		top: 0;
-		bottom: 0;
-		left: 50%;
+		/* Fill the whole window, edge to edge, including on wide screens. */
+		inset: 0;
 		/* Phones: cover the area behind the browser's toolbars too, not just the visible part. */
 		min-height: 100lvh;
-		width: min(100%, var(--app-width));
-		transform: translateX(-50%);
 		z-index: 0;
 		overflow: hidden;
 		background-color: var(--mist);
