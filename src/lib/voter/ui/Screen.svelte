@@ -41,6 +41,7 @@
 		width: min(100%, var(--app-width));
 		min-height: 100dvh;
 		margin: 0 auto;
+		padding-top: env(safe-area-inset-top);
 	}
 	.body {
 		display: flex;

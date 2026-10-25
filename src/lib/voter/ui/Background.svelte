@@ -144,6 +144,7 @@
 		top: 0;
 		bottom: 0;
 		left: 50%;
+		min-height: 100lvh;
 		width: min(100%, var(--app-width));
 		transform: translateX(-50%);
 		z-index: 0;
