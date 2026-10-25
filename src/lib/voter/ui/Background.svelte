@@ -128,51 +128,63 @@
 
 <svelte:head>
 	<meta name="theme-color" content={edge} />
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -- fixed string from EDGE above, no user input -->
+	{@html edgeStyle}
 </svelte:head>
 
 <div class="bg" aria-hidden="true" style:background-color={edge}>
-	<div class="washes" style:background-image={washes}></div>
-	<div class="haze"></div>
-	<div class="shards">
-		{#each config.shards as [x, y, size, rot], i (i)}
-			<svg
-				class="shard"
-				viewBox="0 0 100 100"
-				style:left="{(x / W) * 100}%"
-				style:top="{(y / H) * 100}%"
-				style:width="{(size / W) * 100}%"
-				style:transform="rotate({rot}deg)"
-			>
-				<defs>
-					<linearGradient id="shard-fill-{i}" x1="0" y1="0" x2="1" y2="1">
-						<stop offset="0" stop-color="#fff" stop-opacity="0.32" />
-						<stop offset="1" stop-color="#fff" stop-opacity="0.06" />
-					</linearGradient>
-				</defs>
-				<polygon
-					points={STAR}
-					fill="url(#shard-fill-{i})"
-					stroke="#fff"
-					stroke-opacity="0.55"
-					stroke-width="1"
-					vector-effect="non-scaling-stroke"
-				/>
-			</svg>
-		{/each}
+	<div class="pane">
+		<div class="washes" style:background-image={washes}></div>
+		<div class="haze"></div>
+		<div class="shards">
+			{#each config.shards as [x, y, size, rot], i (i)}
+				<svg
+					class="shard"
+					viewBox="0 0 100 100"
+					style:left="{(x / W) * 100}%"
+					style:top="{(y / H) * 100}%"
+					style:width="{(size / W) * 100}%"
+					style:transform="rotate({rot}deg)"
+				>
+					<defs>
+						<linearGradient id="shard-fill-{i}" x1="0" y1="0" x2="1" y2="1">
+							<stop offset="0" stop-color="#fff" stop-opacity="0.32" />
+							<stop offset="1" stop-color="#fff" stop-opacity="0.06" />
+						</linearGradient>
+					</defs>
+					<polygon
+						points={STAR}
+						fill="url(#shard-fill-{i})"
+						stroke="#fff"
+						stroke-opacity="0.55"
+						stroke-width="1"
+						vector-effect="non-scaling-stroke"
+					/>
+				</svg>
+			{/each}
+		</div>
 	</div>
 </div>
 
 <style>
+	/* The background scrolls with the page instead of being position: fixed.
+	   Phone Safari won't draw fixed elements under its bottom toolbar (it fills that
+	   area with a flat color), but it does show the page itself through the toolbar.
+	   .bg covers the whole page; .pane sticks to the top of the screen while you
+	   scroll, so it looks fixed, and it is 100lvh tall so it reaches under the toolbar. */
 	.bg {
-		position: fixed;
-		/* Fill the whole window, edge to edge, including on wide screens. */
+		position: absolute;
 		inset: 0;
-		/* Phones: cover the area behind the browser's toolbars too, not just the visible part. */
-		min-height: 100lvh;
 		z-index: 0;
-		overflow: hidden;
-		background-color: var(--mist);
+		/* clip, not hidden: hidden would stop .pane from sticking. */
+		overflow: clip;
 		pointer-events: none;
+	}
+	.pane {
+		position: sticky;
+		top: 0;
+		height: 100lvh;
+		overflow: hidden;
 	}
 	.washes,
 	.haze {
