@@ -86,16 +86,16 @@
 		}
 	};
 
-	// One flat color per group, between the colors at the top and bottom edges.
-	// Phone browsers paint this behind the status bar and toolbars (Safari tints its bars
-	// from the page's background color, Chrome on Android uses theme-color), so the
-	// bars match the screen instead of showing a gray strip.
+	// One flat color per group: the color along the top edge of the gradient.
+	// Phone browsers paint this in the strip behind the clock and battery (Safari
+	// colors that strip from the page's background color, Chrome on Android uses
+	// theme-color), so the strip blends into the top of the gradient.
 	const EDGE: Record<BackgroundGroup, string> = {
-		intro: '#c8c4d9',
-		scan: '#d9c0c3',
-		rating: '#e5dce6',
-		ballot: '#e1d5dd',
-		submission: '#cbc8d7'
+		intro: '#bebcd6',
+		scan: '#ecb3a1',
+		rating: '#e4cfda',
+		ballot: '#e5cacc',
+		submission: '#acb6d6'
 	};
 
 	const W = 390;
