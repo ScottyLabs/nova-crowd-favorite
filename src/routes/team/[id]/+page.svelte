@@ -200,4 +200,146 @@
 			{#if bumped}
 				<p class="notice" role="status">Your old #5 moved back to your collection.</p>
 			{/if}
-			{#if
+			{#if rankError !== null}
+				<p class="error" role="alert">{rankError}</p>
+			{/if}
+		</section>
+
+		<section class="block">
+			<label class="label" for="note">Your notes (only you see these)</label>
+			<textarea
+				id="note"
+				class="note glass"
+				rows="7"
+				maxlength={NOTE_LIMIT}
+				placeholder="What stood out? What do you want to remember?"
+				bind:value={note}
+				oninput={onNoteInput}
+				onblur={() => void saveNote()}
+			></textarea>
+			<div class="note-footer">
+				<p class="status" class:error-text={noteStatus === 'error'} role="status">
+					{#if noteStatus === 'saving'}
+						Saving...
+					{:else if noteStatus === 'saved'}
+						<Icon name="check" size={14} /> Saved
+					{:else if noteStatus === 'error'}
+						<Icon name="alert" size={14} /> Couldn't save.
+						<button type="button" class="retry" onclick={() => void saveNote()}>Retry</button>
+					{/if}
+				</p>
+				<p class="tiny">{note.length}/{NOTE_LIMIT}</p>
+			</div>
+		</section>
+	{/if}
+
+	{#snippet footer()}
+		<Button onclick={() => void leave()}>Done</Button>
+	{/snippet}
+</Screen>
+
+<style>
+	.back {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		align-self: flex-start;
+		min-height: 44px;
+		color: var(--white);
+		font-size: 13px;
+		text-decoration: none;
+		text-shadow: 0 1px 8px rgb(31 31 77 / 0.35);
+	}
+	.intro {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.meta {
+		font-size: 13px;
+	}
+	.block {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+	.label {
+		font-size: 12px;
+	}
+	.picker {
+		display: flex;
+		gap: 8px;
+	}
+	.pick {
+		width: 44px;
+		height: 44px;
+		background: var(--white);
+		border: 1px solid var(--ink);
+		font-size: 15px;
+		cursor: pointer;
+	}
+	.pick.selected {
+		background: var(--flare);
+		color: var(--white);
+	}
+	.pick:disabled {
+		background: rgb(255 255 255 / 0.35);
+		color: var(--muted);
+		border-color: rgb(43 43 43 / 0.25);
+		cursor: not-allowed;
+	}
+	.note {
+		width: 100%;
+		min-height: 180px;
+		padding: 14px;
+		background: rgb(255 255 255 / 0.75);
+		font: inherit;
+		font-size: 15px;
+		line-height: 1.5;
+		letter-spacing: inherit;
+		color: var(--ink);
+		resize: vertical;
+	}
+	.note-footer {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+		min-height: 20px;
+	}
+	.status {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 12px;
+		color: var(--muted);
+	}
+	.error-text {
+		color: var(--flare);
+	}
+	.retry {
+		padding: 0;
+		background: none;
+		border: none;
+		color: var(--ink);
+		font-size: 12px;
+		text-decoration: underline;
+		cursor: pointer;
+	}
+	.notice {
+		padding: 10px 12px;
+		background: var(--glass-strong);
+		border: 1px solid var(--ink);
+		font-size: 12px;
+	}
+	.card {
+		padding: 16px;
+	}
+	.error {
+		padding: 12px 14px;
+		background: var(--ink);
+		color: var(--white);
+		border: 1px solid var(--flare);
+		font-size: 13px;
+	}
+</style>

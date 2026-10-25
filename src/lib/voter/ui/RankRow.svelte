@@ -2,8 +2,8 @@
 	import type { Team } from '../types.ts';
 	import Icon from './Icon.svelte';
 
-	// One team in the top 5 (Figma "RankRow"): orange rank badge, name, table and
-	// description, and the six-dot grip on the right for dragging.
+	// One team in the top 5 (Figma "RankRow"): orange rank badge, name, team
+	// members, and the six-dot grip on the right for dragging.
 	// Tapping anywhere except the grip opens the team page.
 	// The parent page owns the drag logic; this row only reports grip events
 	// and shows whatever offset and "lifted" state the parent gives it.
@@ -12,7 +12,6 @@
 		/** 1 to 5, or 0 while the row is being dragged out of the top 5. */
 		rank: number;
 		team: Team;
-		hasNote: boolean;
 		href: string;
 		/** How far the row is moved up or down right now, in pixels. */
 		offset?: number;
@@ -28,7 +27,6 @@
 	let {
 		rank,
 		team,
-		hasNote,
 		href,
 		offset = 0,
 		lifted = false,
@@ -128,7 +126,7 @@
 		text-overflow: ellipsis;
 	}
 	.name {
-		font-size; 15px;
+		font-size: 15px;
 	}
 	.meta {
 		font-size: 11px;
