@@ -1,15 +1,12 @@
 import { dev } from "$app/env";
+import { isPreview } from "../../../../lib/server/preview";
 import { db } from "../../../../lib/server/db";
 import { hashCode } from "../../../../lib/server/voter-code";
 import { CLOSES_AT_KEY } from "../../../../lib/server/voting";
 
-// DEV ONLY: open http://localhost:5173/api/dev/seed while running `deno task dev`.
-// Fills the local database with test teams, QR codes and a test voter, then sends
-// you to that voter's link. The voter's own team ("Own Team") starts unlinked, and
-// stickers qr-dev-new-1 and qr-dev-new-2 are free to link with "Scan my team".
-// Test "Voting closed": /api/dev/seed?closed (no ballot submitted)
-// or /api/dev/seed?closed=submitted (ballot submitted before the close).
-// Returns 404 in production builds, so it can't touch the real event database.
+// Seeds and resets demo data locally and on isolated PR previews.
+// APP_URL comes from Kennel; the request Host cannot enable this endpoint.
+// See README.md for demo links and sticker codes.
 
 const VOTER_EMAIL = "dev-voter@example.com";
 const VOTER_CODE = "dev-voter-code-0001";
@@ -42,7 +39,7 @@ function seedVotingClosed(url: URL, now: string): void {
 }
 
 export async function GET({ url }: { url: URL }) {
-  if (!dev) return new Response("Not found", { status: 404 });
+  if (!dev && !isPreview(process.env.APP_URL)) return new Response("Not found", { status: 404 });
 
   const now = new Date().toISOString();
   const upsertTeam = db.prepare(`

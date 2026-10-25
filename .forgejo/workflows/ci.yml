@@ -5,7 +5,19 @@ on:
     branches: [main, staging, dev]
   pull_request:
 
+# This project still uses Kennel's devenv modules. The current shared workflow
+# requires the newer flake module and its apps.<system>.ci output.
 jobs:
   check:
-    uses: ScottyLabs/kennel/.forgejo/workflows/ci.yml@main
+    runs-on: native
     enable-openid-connect: true
+    env:
+      SECRETSPEC_PROFILE: ci
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@v7
+      - name: Run checks
+        run: devenv shell -- prek run --all-files
+      - name: Run security scans
+        run: devenv tasks run security
+      - name: Build production package
+        run: devenv shell -- nix build .#web
