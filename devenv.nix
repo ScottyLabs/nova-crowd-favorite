@@ -10,7 +10,7 @@
       enable = true;
       svelte.enable = true;
     };
-    kennel.services.web = { };
+    kennel.services.web.customDomain = "crowd-favorite.nova.scottylabs.org";
   };
 
   # Use the same locked checker as `deno task check` on every platform.
