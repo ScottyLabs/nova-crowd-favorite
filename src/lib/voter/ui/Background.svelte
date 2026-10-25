@@ -133,31 +133,33 @@
 <div class="bg" aria-hidden="true" style:background-color={edge}>
 	<div class="washes" style:background-image={washes}></div>
 	<div class="haze"></div>
-	{#each config.shards as [x, y, size, rot], i (i)}
-		<svg
-			class="shard"
-			viewBox="0 0 100 100"
-			style:left="{(x / W) * 100}%"
-			style:top="{(y / H) * 100}%"
-			style:width="{(size / W) * 100}%"
-			style:transform="rotate({rot}deg)"
-		>
-			<defs>
-				<linearGradient id="shard-fill-{i}" x1="0" y1="0" x2="1" y2="1">
-					<stop offset="0" stop-color="#fff" stop-opacity="0.32" />
-					<stop offset="1" stop-color="#fff" stop-opacity="0.06" />
-				</linearGradient>
-			</defs>
-			<polygon
-				points={STAR}
-				fill="url(#shard-fill-{i})"
-				stroke="#fff"
-				stroke-opacity="0.55"
-				stroke-width="1"
-				vector-effect="non-scaling-stroke"
-			/>
-		</svg>
-	{/each}
+	<div class="shards">
+		{#each config.shards as [x, y, size, rot], i (i)}
+			<svg
+				class="shard"
+				viewBox="0 0 100 100"
+				style:left="{(x / W) * 100}%"
+				style:top="{(y / H) * 100}%"
+				style:width="{(size / W) * 100}%"
+				style:transform="rotate({rot}deg)"
+			>
+				<defs>
+					<linearGradient id="shard-fill-{i}" x1="0" y1="0" x2="1" y2="1">
+						<stop offset="0" stop-color="#fff" stop-opacity="0.32" />
+						<stop offset="1" stop-color="#fff" stop-opacity="0.06" />
+					</linearGradient>
+				</defs>
+				<polygon
+					points={STAR}
+					fill="url(#shard-fill-{i})"
+					stroke="#fff"
+					stroke-opacity="0.55"
+					stroke-width="1"
+					vector-effect="non-scaling-stroke"
+				/>
+			</svg>
+		{/each}
+	</div>
 </div>
 
 <style>
@@ -183,6 +185,16 @@
 			rgb(255 255 255 / 0.12),
 			rgb(237 237 250 / 0.38)
 		);
+	}
+	/* The stars stay the size of the phone layout and centered, so they don't
+	   stretch on wide screens. Only the color washes fill the whole window. */
+	.shards {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 50%;
+		width: min(100%, var(--app-width));
+		transform: translateX(-50%);
 	}
 	.shard {
 		position: absolute;
