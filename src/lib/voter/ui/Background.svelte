@@ -101,16 +101,30 @@
 	const W = 390;
 	const H = 844;
 
+	// The background layer is 2x the screen in each direction, centered on it, so the
+	// gradient keeps going past the edges (pinch-zoom out, behind the phone's toolbars).
+	// Positions are worked out for the screen, then mapped into the bigger layer.
+	const SCALE = 2;
+	const MARGIN = (SCALE - 1) / 2;
+
+	/** A percentage of the screen, as a percentage of the bigger layer. */
+	function toLayer(percentOfScreen: number): number {
+		return (MARGIN * 100 + percentOfScreen) / SCALE;
+	}
+
 	function washToGradient([color, x, y, d, opacity]: Wash): string {
-		const cx = ((x + d / 2) / W) * 100;
-		const cy = ((y + d / 2) / H) * 100;
+		const cx = toLayer(((x + d / 2) / W) * 100);
+		const cy = toLayer(((y + d / 2) / H) * 100);
 		// Wider than the shape itself, so the edge fades out like a heavy blur.
-		const rx = ((d * 0.75) / W) * 100;
-		const ry = ((d * 0.75) / H) * 100;
+		const rx = (((d * 0.75) / W) * 100) / SCALE;
+		const ry = (((d * 0.75) / H) * 100) / SCALE;
 		const rgb = RGB[color];
 		const mid = (opacity * 0.6).toFixed(3);
 		return `radial-gradient(ellipse ${rx}% ${ry}% at ${cx}% ${cy}%, rgb(${rgb} / ${opacity}) 0%, rgb(${rgb} / ${mid}) 45%, rgb(${rgb} / 0) 100%)`;
 	}
+
+	// White haze from the top to the bottom of the screen; past the screen, the end colors continue.
+	const HAZE = `linear-gradient(to bottom, rgb(255 255 255 / 0.12) ${toLayer(0)}%, rgb(237 237 250 / 0.38) ${toLayer(100)}%)`;
 
 	const config = $derived(GROUPS[group]);
 	const edge = $derived(EDGE[group]);
@@ -131,9 +145,9 @@
 </svelte:head>
 
 <div class="bg" aria-hidden="true" style:background-color={edge}>
-	<div class="pane">
-		<div class="washes" style:background-image={washes}></div>
-		<div class="haze"></div>
+	<div class="washes" style:background-image={washes}></div>
+	<div class="haze" style:background-image={HAZE}></div>
+	<div class="screen-area">
 		<div class="shards">
 			{#each config.shards as [x, y, size, rot], i (i)}
 				<svg
@@ -165,39 +179,34 @@
 </div>
 
 <style>
-	/* The background scrolls with the page instead of being position: fixed.
-	   Phone Safari won't draw fixed elements under its bottom toolbar (it fills that
-	   area with a flat color), but it does show the page itself through the toolbar.
-	   .bg covers the whole page; .pane sticks to the top of the screen while you
-	   scroll, so it looks fixed, and it is 100lvh tall so it reaches under the toolbar. */
+	/* Pinned to the screen, and twice its size in each direction (centered), so the
+	   gradient continues past the edges instead of ending in a flat color. A fixed
+	   layer that sticks out past the screen does not make the page scrollable. */
 	.bg {
-		position: absolute;
-		inset: 0;
+		position: fixed;
+		top: -50lvh;
+		left: -50vw;
+		width: 200vw;
+		height: 200lvh;
 		z-index: 0;
-		/* clip, not hidden: hidden would stop .pane from sticking. */
-		overflow: clip;
-		pointer-events: none;
-	}
-	.pane {
-		position: sticky;
-		top: 0;
-		height: 100lvh;
 		overflow: hidden;
+		pointer-events: none;
 	}
 	.washes,
 	.haze {
 		position: absolute;
 		inset: 0;
 	}
-	.haze {
-		background: linear-gradient(
-			to bottom,
-			rgb(255 255 255 / 0.12),
-			rgb(237 237 250 / 0.38)
-		);
+	/* The part of the layer that lines up with the screen. */
+	.screen-area {
+		position: absolute;
+		top: 25%;
+		left: 25%;
+		width: 50%;
+		height: 50%;
 	}
 	/* The stars stay the size of the phone layout and centered, so they don't
-	   stretch on wide screens. Only the color washes fill the whole window. */
+	   stretch on wide screens. They may stick out past the screen edges. */
 	.shards {
 		position: absolute;
 		top: 0;

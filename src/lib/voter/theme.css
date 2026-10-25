@@ -117,10 +117,3 @@ a {
     animation-duration: 0.01ms !important;
   }
 }
-
-/* The page is always at least a full screen tall (including the area behind the
-   phone browser's toolbars), and the background layer is sized to it. */
-body {
-  position: relative;
-  min-height: 100lvh;
-}
