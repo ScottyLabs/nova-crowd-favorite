@@ -19,6 +19,10 @@ deno task organizer list-voters
 deno task organizer list-teams
 deno task organizer list-ballots
 
+# Export ballots for manual review/counting and a complete database backup.
+deno task organizer export-csv > ballots.csv
+deno task organizer export-db > nova-backup.db
+
 # Generate and register 50 stickers; print their codes and QR URLs.
 deno task organizer qr 50
 
@@ -68,6 +72,8 @@ voter links are private and must not be shared publicly.
 | GET | `/api/organizer/voters` | No body |
 | GET | `/api/organizer/teams` | No body |
 | GET | `/api/organizer/ballots` | No body |
+| GET | `/api/organizer/export/ballots` | No body; downloads CSV |
+| GET | `/api/organizer/export/database` | No body; downloads SQLite database |
 | POST | `/api/organizer/voters` | `{"emails":["person@example.com"]}` |
 | POST | `/api/organizer/qr-codes` | `{"codes":["sticker-001","sticker-002"]}` |
 | PUT | `/api/organizer/voting` | `{"closesAt":"2026-11-08T13:00:00-05:00"}` or `{"closesAt":null}` |
@@ -85,3 +91,26 @@ and update time. Ballots include `voterEmail`, `ranked` (ordered team IDs),
 `status`, and `updatedAt` (last draft save or submission time). Both drafts and
 submitted ballots are included; voters without a saved ballot have no ballot
 entry. Treat these responses as private: they contain emails and voting choices.
+
+### Data exports
+
+Export requests use the same empty-body signatures as list requests. Both
+responses are attachments with `Cache-Control: no-store`. The CLI writes the
+file bytes to stdout; use the redirections above to save them.
+
+The ballot CSV contains one row per saved ballot, ordered by voter email:
+`voter_email`, `status`, `updated_at`, followed by `rank_N_team_id`,
+`rank_N_team_name`, and `rank_N_team_active` for ranks 1-5. Active status is
+`1` or `0`; unfilled ranks have empty cells. Both drafts and submitted ballots
+are included, with inactive teams preserved. Filter `status` to `submitted`
+when counting votes. Voters who have never saved a ballot have no row.
+`updated_at` is the last draft save or submission time. Names and active
+statuses reflect the database at export time. Spreadsheet formula-like cells
+are prefixed with an apostrophe so they are treated as text; the database
+snapshot preserves the original values.
+
+The database export is a standalone, consistent SQLite snapshot of every table,
+including committed writes in the WAL. It can be opened without accompanying
+`-wal` or `-shm` files. It contains emails, credential hashes, private notes,
+and ballots; keep it private. The CSV also contains emails and voting choices.
+Neither export changes voting data or sends data back to the Sheet.

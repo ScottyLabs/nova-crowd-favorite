@@ -14,6 +14,14 @@ let path: string;
 let method = "POST";
 let payload: unknown;
 switch (command) {
+  case "export-csv":
+  case "export-db":
+    if (args.length > 0) {
+      throw new Error(`Usage: deno task organizer ${command}`);
+    }
+    path = `/api/organizer/export/${command === "export-csv" ? "ballots" : "database"}`;
+    method = "GET";
+    break;
   case "list-voters":
   case "list-teams":
   case "list-ballots":
@@ -59,7 +67,7 @@ switch (command) {
     break;
   default:
     throw new Error(
-      "Usage: deno task organizer voters EMAIL... | list-voters | list-teams | list-ballots | qr COUNT | register-qr CODE... | close ISO_TIMESTAMP | open",
+      "Usage: deno task organizer voters EMAIL... | list-voters | list-teams | list-ballots | export-csv | export-db | qr COUNT | register-qr CODE... | close ISO_TIMESTAMP | open",
     );
 }
 
@@ -85,8 +93,13 @@ const response = await fetch(new URL(path, site), {
   },
   body: method === "GET" ? undefined : body,
 });
-const result: unknown = await response.json();
 if (!response.ok) {
+  const result: unknown = await response.json();
   throw new Error(`HTTP ${response.status}: ${JSON.stringify(result)}`);
 }
-console.log(JSON.stringify(result, null, 2));
+if (command === "export-csv" || command === "export-db") {
+  process.stdout.write(new Uint8Array(await response.arrayBuffer()));
+} else {
+  const result: unknown = await response.json();
+  console.log(JSON.stringify(result, null, 2));
+}
