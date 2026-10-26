@@ -69,32 +69,33 @@ void test("tally counts submitted ballots, skips disqualifications, preserves in
       generatedAt: result.generatedAt,
       provisional: true,
       submittedBallots: 2,
-      candidates: [{ id: "a", name: "Inactive team", active: false }],
-      disqualifiedTeams: [{ id: "b", name: "Disqualified team", reason: "Rule violation" }],
-      status: "winner",
-      winnerId: "a",
-      tiedTeamIds: [],
       ranking: [{ rank: 1, teamId: "a", name: "Inactive team" }],
-      unrankedTeamIds: [],
-      elections: [
-        {
-          rank: 1,
-          status: "winner",
-          winnerId: "a",
-          tiedTeamIds: [],
-          rounds: [
-            {
-              number: 1,
-              counts: [{ teamId: "a", votes: 1 }],
-              continuingBallots: 1,
-              exhaustedBallots: 1,
-              eliminatedTeamId: null,
-            },
-          ],
-        },
-      ],
     });
     deepStrictEqual(db.prepare("SELECT * FROM ballots ORDER BY voter_email").all(), before);
+  } finally {
+    db.close();
+  }
+});
+
+void test("compact tally reports shared places with team names", async () => {
+  const db = database();
+  try {
+    db.exec(`
+      INSERT INTO voters VALUES ('tie@example.com', NULL, '2026-01-01');
+      INSERT INTO ballots (voter_email, rank_1, status, submitted_at)
+        VALUES ('tie@example.com', 'c', 'submitted', '2026-01-01');
+    `);
+    const result: unknown = await (await tallyVotes(db, signed(), secret)).json();
+    ok(typeof result === "object" && result !== null && "generatedAt" in result);
+    deepStrictEqual(result, {
+      generatedAt: result.generatedAt,
+      provisional: true,
+      submittedBallots: 3,
+      ranking: [
+        { rank: 1, teamId: "a", name: "Inactive team" },
+        { rank: 1, teamId: "c", name: "Unranked team" },
+      ],
+    });
   } finally {
     db.close();
   }
@@ -120,22 +121,19 @@ void test("closed voting produces final results and reopening produces provision
   }
 });
 
-void test("no submitted eligible preferences returns no-votes", async () => {
+void test("no submitted eligible preferences returns an empty ranking", async () => {
   const db = database();
   try {
     db.exec("INSERT INTO team_disqualifications VALUES ('a', 'Rule violation')");
     const response = await tallyVotes(db, signed(), secret);
     const result: unknown = await response.json();
-    ok(
-      typeof result === "object" &&
-        result !== null &&
-        "status" in result &&
-        "winnerId" in result &&
-        "elections" in result,
-    );
-    strictEqual(result.status, "no-votes");
-    strictEqual(result.winnerId, null);
-    deepStrictEqual(result.elections, []);
+    ok(typeof result === "object" && result !== null && "generatedAt" in result);
+    deepStrictEqual(result, {
+      generatedAt: result.generatedAt,
+      provisional: true,
+      submittedBallots: 2,
+      ranking: [],
+    });
   } finally {
     db.close();
   }

@@ -90,7 +90,12 @@ void test("list and tally commands send signed GET requests without bodies", asy
     await Promise.all(
       ["voters", "teams", "ballots", "tally"].map(async (resource) => {
         const command = resource === "tally" ? "tally" : `list-${resource}`;
-        const stdout = await runCommand(command, address.port, secret);
+        const stdout = await runCommand(
+          command,
+          address.port,
+          secret,
+          resource === "tally" ? ["--json"] : [],
+        );
         deepStrictEqual(JSON.parse(stdout), {
           method: "GET",
           path: `/api/organizer/${resource}`,

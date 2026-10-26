@@ -1,4 +1,5 @@
 import process from "node:process";
+import { formatTally, isTallySummary } from "./tally-output.ts";
 
 const [command, ...args] = process.argv.slice(2);
 const site = process.env.APP_URL;
@@ -15,8 +16,8 @@ let method = "POST";
 let payload: unknown;
 switch (command) {
   case "tally":
-    if (args.length > 0) {
-      throw new Error("Usage: deno task organizer tally");
+    if (args.length > 1 || (args.length === 1 && args[0] !== "--json")) {
+      throw new Error("Usage: deno task organizer tally [--json]");
     }
     path = "/api/organizer/tally";
     method = "GET";
@@ -102,7 +103,7 @@ switch (command) {
     break;
   default:
     throw new Error(
-      "Usage: deno task organizer voters EMAIL... | list-voters | list-teams | list-ballots | tally | reissue EMAIL | reset-ballot EMAIL | unlink-qr CODE | disqualify TEAM_ID [REASON] | reinstate TEAM_ID | export-csv | export-db | qr COUNT | register-qr CODE... | close ISO_TIMESTAMP | open",
+      "Usage: deno task organizer voters EMAIL... | list-voters | list-teams | list-ballots | tally [--json] | reissue EMAIL | reset-ballot EMAIL | unlink-qr CODE | disqualify TEAM_ID [REASON] | reinstate TEAM_ID | export-csv | export-db | qr COUNT | register-qr CODE... | close ISO_TIMESTAMP | open",
     );
 }
 
@@ -134,6 +135,10 @@ if (!response.ok) {
 }
 if (command === "export-csv" || command === "export-db") {
   process.stdout.write(new Uint8Array(await response.arrayBuffer()));
+} else if (command === "tally" && args[0] !== "--json") {
+  const result: unknown = await response.json();
+  if (!isTallySummary(result)) throw new Error("Invalid tally response");
+  console.log(formatTally(result));
 } else {
   const result: unknown = await response.json();
   console.log(JSON.stringify(result, null, 2));

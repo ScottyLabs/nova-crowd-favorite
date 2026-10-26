@@ -8,7 +8,7 @@ function readElection(db: DatabaseSync) {
   try {
     const teams = db
       .prepare(`
-      SELECT teams.id, teams.name, teams.active, d.reason,
+      SELECT teams.id, teams.name,
         d.team_id IS NOT NULL AS disqualified
       FROM teams LEFT JOIN team_disqualifications d ON d.team_id = teams.id
       ORDER BY teams.id
@@ -51,20 +51,12 @@ export async function tallyVotes(
       (id): id is string => typeof id === "string" && eligible.has(id),
     ),
   );
-  const candidates = new Set(rankings.flat());
   const result = tallyIrv(rankings);
   const names = new Map(teams.map((team) => [team.id, team.name]));
   return json({
     generatedAt: new Date().toISOString(),
     provisional: !(typeof closesAt === "string" && Date.now() >= Date.parse(closesAt)),
     submittedBallots: ballots.length,
-    candidates: teams
-      .filter((team) => typeof team.id === "string" && candidates.has(team.id))
-      .map((team) => ({ id: team.id, name: team.name, active: team.active === 1 })),
-    disqualifiedTeams: teams
-      .filter((team) => team.disqualified === 1)
-      .map((team) => ({ id: team.id, name: team.name, reason: team.reason })),
-    ...result,
     ranking: result.ranking.map((entry) => ({
       rank: entry.rank,
       teamId: entry.teamId,

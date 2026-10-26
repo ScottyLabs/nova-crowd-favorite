@@ -72,11 +72,10 @@ sticker. Their email must match a team member email in the Sheet.
    link a sticker; other voters scan it to collect and rank that team.
 1. Set the closing time with `close`, including the timezone. After that time,
    run `tally`. Only submitted ballots count, so remind voters to submit.
-1. Check `provisional` is `false` before announcing a result. Read `ranking`
-   for the ordered places, including shared ranks. `status: "winner"` means
-   ranking completed. `winnerId` identifies a sole first-place team; shared
-   first place uses `winnerId: null` and `tiedTeamIds`. `no-votes` means no
-   submitted ballots have an eligible ranked team.
+1. Run `tally` to see the ranked team table, including shared places. Confirm
+   the heading says **Final results** before announcing. **Provisional results**
+   means voting is still open. No eligible submitted ballots produces a message
+   instead of a ranking.
 1. Save `export-csv` and `export-db` using the commands above. Keep both private.
 
 `TEAM_ID` in recovery examples means the `id` from `list-teams`, not the team
@@ -225,18 +224,52 @@ place, remove them from every ballot, and rerun IRV for the remaining teams.
 This organizer-defined rule also applies to zero-vote ties and ties for
 elimination, even when another team has more votes. Shared places use competition
 ranking: two teams sharing first are followed by third (1, 1, 3).
-Each tied election retains `status: "elimination-tie"` and `tiedTeamIds` in
-`elections` so the decision can be audited. Counting continues after the tie.
-No eligible preferences returns `status: "no-votes"` and no elections.
+Counting continues after the tie. No eligible preferences returns an empty
+`ranking`.
 
-The response includes `generatedAt`, `provisional`, `submittedBallots`, candidate
-IDs/names/active flags, disqualified teams and reasons, and `elections`. Each
-election contains its `rank`, `status`, `winnerId`, `tiedTeamIds`, and `rounds`.
-Each round has `counts`, `continuingBallots`, `exhaustedBallots`, and
-`eliminatedTeamId`. Each `ranking` entry contains `rank`, `teamId`, and `name`.
-A complete ranking has `status: "winner"` and no `unrankedTeamIds`.
-`winnerId` identifies a sole first-place team. When first place is shared,
-`winnerId` is null and top-level `tiedTeamIds` lists the first-place teams. Results are provisional while voting is open; a passed
-closing deadline sets `provisional: false`. Reopening voting makes subsequent
-tallies provisional. Names and eligibility reflect the database snapshot used
-for that tally.
+The JSON response contains only:
+
+- `generatedAt`: the timestamp of this tally.
+- `provisional`: `true` while voting is open; `false` once the closing deadline
+  has passed. Reopening voting makes subsequent tallies provisional.
+- `submittedBallots`: the number of submitted ballots, including those with no
+  eligible preferences remaining.
+- `ranking`: the ordered results, each with `rank`, `teamId`, and `name`.
+  Shared places have the same rank.
+
+Names and eligibility reflect the database snapshot used for that tally.
+
+#### Read and save results
+
+With `APP_URL` and `SYNC_HMAC_SECRET` loaded for the intended app, run:
+
+```bash
+deno task organizer tally
+```
+
+The command displays a table with a final/provisional heading and submitted
+ballot count, for example:
+
+```text
+Final results · 42 submitted ballots
+
+Rank  Team
+1     Team Aurora
+1     Team Beacon
+3     Team Comet
+
+Shared rank 1: Team Aurora, Team Beacon
+```
+
+The heading says **Provisional results** while voting is open. Shared places
+use 1, 1, 3 numbering. The configured tie rule also assigns shared places to
+teams tied for lowest votes, even when another team has more votes.
+
+To save the same results as JSON, use:
+
+```bash
+deno task organizer tally --json > results.json
+```
+
+This saves a snapshot for review. Rerun the command if ballots, voting, or
+eligibility have changed. The API returns the same compact JSON response.
