@@ -6,11 +6,20 @@ export interface IrvRound {
   eliminatedTeamId: string | null;
 }
 
-export interface IrvResult {
+interface ElectionResult {
   status: "winner" | "elimination-tie" | "no-votes";
   winnerId: string | null;
   tiedTeamIds: string[];
   rounds: IrvRound[];
+}
+
+export interface IrvResult {
+  status: ElectionResult["status"];
+  winnerId: string | null;
+  tiedTeamIds: string[];
+  ranking: { rank: number; teamId: string }[];
+  unrankedTeamIds: string[];
+  elections: (ElectionResult & { rank: number })[];
 }
 
 function countRound(ballots: string[][], remaining: Set<string>, number: number): IrvRound {
@@ -30,8 +39,7 @@ function countRound(ballots: string[][], remaining: Set<string>, number: number)
   };
 }
 
-/** Ballots contain eligible team IDs in preference order, including empty/exhausted ballots. */
-export function tallyIrv(ballots: string[][]): IrvResult {
+function electWinner(ballots: string[][]): ElectionResult {
   const remaining = new Set(ballots.flat().toSorted());
   const rounds: IrvRound[] = [];
   while (remaining.size > 0) {
@@ -55,4 +63,36 @@ export function tallyIrv(ballots: string[][]): IrvResult {
     remaining.delete(lowest[0].teamId);
   }
   return { status: "no-votes", winnerId: null, tiedTeamIds: [], rounds };
+}
+
+/** Select each place by rerunning IRV with previously selected teams removed. */
+export function tallyIrv(ballots: string[][]): IrvResult {
+  const remaining = new Set(ballots.flat().toSorted());
+  const ranking: IrvResult["ranking"] = [];
+  const elections: IrvResult["elections"] = [];
+  let preferences = ballots;
+  let status: IrvResult["status"] = "no-votes";
+  let tiedTeamIds: string[] = [];
+  while (remaining.size > 0) {
+    const election = electWinner(preferences);
+    const rank = ranking.length + 1;
+    elections.push({ rank, ...election });
+    status = election.status;
+    if (election.winnerId === null) {
+      tiedTeamIds = election.tiedTeamIds;
+      break;
+    }
+    const teamId = election.winnerId;
+    ranking.push({ rank, teamId });
+    remaining.delete(teamId);
+    preferences = preferences.map((ballot) => ballot.filter((id) => id !== teamId));
+  }
+  return {
+    status,
+    winnerId: ranking[0]?.teamId ?? null,
+    tiedTeamIds,
+    ranking,
+    unrankedTeamIds: [...remaining],
+    elections,
+  };
 }

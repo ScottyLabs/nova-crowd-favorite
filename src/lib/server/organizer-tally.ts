@@ -52,6 +52,8 @@ export async function tallyVotes(
     ),
   );
   const candidates = new Set(rankings.flat());
+  const result = tallyIrv(rankings);
+  const names = new Map(teams.map((team) => [team.id, team.name]));
   return json({
     generatedAt: new Date().toISOString(),
     provisional: !(typeof closesAt === "string" && Date.now() >= Date.parse(closesAt)),
@@ -62,6 +64,11 @@ export async function tallyVotes(
     disqualifiedTeams: teams
       .filter((team) => team.disqualified === 1)
       .map((team) => ({ id: team.id, name: team.name, reason: team.reason })),
-    ...tallyIrv(rankings),
+    ...result,
+    ranking: result.ranking.map((entry) => ({
+      rank: entry.rank,
+      teamId: entry.teamId,
+      name: names.get(entry.teamId),
+    })),
   });
 }

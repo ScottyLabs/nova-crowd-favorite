@@ -9,7 +9,9 @@ Run from this repository with Deno installed and the production
 the deployed app. Have a maintainer prepare this repository, install Deno,
 and load the secret into your terminal before the event. Keep that terminal
 open and run the commands from this repository's folder. You do not need to
-write API requests or use SQLite.
+write API requests or use SQLite. Use the HTTPS event URL so in-app camera
+access works on attendees' phones. Deployment and initial credentials are
+maintainer setup; organizer commands do not deploy the app.
 
 ```sh
 export APP_URL=https://crowd-favorite.nova.scottylabs.org
@@ -197,16 +199,21 @@ disqualification flag. Reasons are optional and accept up to 1,000 characters.
 
 ### Ranked-choice tally (IRV)
 
-Run `deno task organizer tally` to calculate a single winner from the current
-submitted ballots. The endpoint is read-only and signs an empty body like the
-list endpoints. It reads ballots, teams, disqualifications, and the deadline
-from one database snapshot. It does not close voting or store a final result.
+Run `deno task organizer tally` to rank teams by rerunning IRV for each place.
+The first election selects first place. That team is removed from every ballot,
+then a fresh election selects second place, and so on. Teams eliminated within
+one election are reconsidered for later places. This can give different lower
+places from reversing the elimination order of a single election.
 
-Each round counts a ballot for its highest-ranked remaining candidate. A team
-wins with strictly more than half of the continuing (non-exhausted) ballots.
-Otherwise, the unique lowest-count team is eliminated and its ballots transfer
-to their next remaining preference. Ballots with no remaining preference are
-exhausted and excluded from the majority denominator.
+The endpoint is read-only and signs an empty body like the list endpoints.
+It reads ballots, teams, disqualifications, and the deadline from one database
+snapshot. It does not close voting or store a final result.
+
+In each election, a round counts a ballot for its highest-ranked remaining
+candidate. A team wins that place with strictly more than half of the continuing
+(non-exhausted) ballots. Otherwise, the unique lowest-count team is eliminated
+and its ballots transfer to their next remaining preference. Ballots with no
+remaining preference are exhausted and excluded from the majority denominator.
 
 Disqualified teams are skipped, allowing their ballots to transfer. Inactive
 teams remain eligible: removal from the Sheet is not disqualification.
@@ -214,16 +221,22 @@ Candidates are eligible teams appearing anywhere in submitted rankings;
 unranked teams do not participate. Drafts and archived reset ballots never count.
 
 If multiple teams share the lowest count, counting stops with
-`status: "elimination-tie"`, `winnerId: null`, and `tiedTeamIds`. This applies
-to zero-vote ties too. These IDs identify a tie for elimination, not necessarily
-a tie for first place. No team is selected by ID, name, or randomness. Use the
+`status: "elimination-tie"` and `tiedTeamIds`. This applies to zero-vote ties too.
+These IDs identify a tie for elimination, not necessarily a tie for first place.
+`ranking` preserves the places already selected. `unrankedTeamIds` lists all
+teams whose places remain unresolved, including teams eliminated during the
+unfinished election. `winnerId` retains first place if already selected;
+otherwise it is null. No team is selected by ID, name, or randomness. Use the
 CSV export for manual resolution; do not disqualify teams just to break a tie.
-A tally with no eligible preferences returns `status: "no-votes"` and no rounds.
+No eligible preferences returns `status: "no-votes"` and no elections.
 
 The response includes `generatedAt`, `provisional`, `submittedBallots`, candidate
-IDs/names/active flags, disqualified teams and reasons, and every round's
-`counts`, `continuingBallots`, `exhaustedBallots`, and `eliminatedTeamId`.
-A successful result has `status: "winner"` and `winnerId`. Results are
-provisional while voting is open; a passed closing deadline sets
-`provisional: false`. Reopening voting makes subsequent tallies provisional.
-Names and eligibility reflect the database snapshot used for that tally.
+IDs/names/active flags, disqualified teams and reasons, and `elections`. Each
+election contains its `rank`, `status`, `winnerId`, `tiedTeamIds`, and `rounds`.
+Each round has `counts`, `continuingBallots`, `exhaustedBallots`, and
+`eliminatedTeamId`. Each `ranking` entry contains `rank`, `teamId`, and `name`.
+A complete ranking has `status: "winner"`, a `winnerId`, and no
+`unrankedTeamIds`. Results are provisional while voting is open; a passed
+closing deadline sets `provisional: false`. Reopening voting makes subsequent
+tallies provisional. Names and eligibility reflect the database snapshot used
+for that tally.

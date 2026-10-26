@@ -74,13 +74,23 @@ void test("tally counts submitted ballots, skips disqualifications, preserves in
       status: "winner",
       winnerId: "a",
       tiedTeamIds: [],
-      rounds: [
+      ranking: [{ rank: 1, teamId: "a", name: "Inactive team" }],
+      unrankedTeamIds: [],
+      elections: [
         {
-          number: 1,
-          counts: [{ teamId: "a", votes: 1 }],
-          continuingBallots: 1,
-          exhaustedBallots: 1,
-          eliminatedTeamId: null,
+          rank: 1,
+          status: "winner",
+          winnerId: "a",
+          tiedTeamIds: [],
+          rounds: [
+            {
+              number: 1,
+              counts: [{ teamId: "a", votes: 1 }],
+              continuingBallots: 1,
+              exhaustedBallots: 1,
+              eliminatedTeamId: null,
+            },
+          ],
         },
       ],
     });
@@ -121,11 +131,11 @@ void test("no submitted eligible preferences returns no-votes", async () => {
         result !== null &&
         "status" in result &&
         "winnerId" in result &&
-        "rounds" in result,
+        "elections" in result,
     );
     strictEqual(result.status, "no-votes");
     strictEqual(result.winnerId, null);
-    deepStrictEqual(result.rounds, []);
+    deepStrictEqual(result.elections, []);
   } finally {
     db.close();
   }
