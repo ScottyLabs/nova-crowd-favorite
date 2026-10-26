@@ -1,5 +1,5 @@
 import { deepStrictEqual, match, ok, strictEqual } from "node:assert";
-import { createHmac } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,7 +7,7 @@ import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
 import { exportOrganizerData } from "./organizer-export.ts";
 
-const secret = "export-test-secret";
+const secret = randomBytes(32).toString("hex");
 
 function signed(timestamp = String(Date.now()), body = ""): Request {
   return new Request("https://example.com", {

@@ -1,11 +1,11 @@
 import { deepStrictEqual, ok, strictEqual } from "node:assert";
-import { createHmac } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
 import { tallyVotes } from "./organizer-tally.ts";
 
-const secret = "tally-test-secret";
+const secret = randomBytes(32).toString("hex");
 
 function signed(timestamp = String(Date.now()), body = ""): Request {
   return new Request("https://example.com", {

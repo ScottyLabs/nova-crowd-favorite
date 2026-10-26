@@ -1,5 +1,5 @@
 import { deepStrictEqual, notStrictEqual, ok, rejects, strictEqual } from "node:assert";
-import { createHmac } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
@@ -11,7 +11,7 @@ import {
 } from "./organizer-recovery.ts";
 import { hashCode } from "./voter-code.ts";
 
-const secret = "recovery-test-secret";
+const secret = randomBytes(32).toString("hex");
 const origin = "https://example.com";
 
 function signed(body: unknown, timestamp = String(Date.now())): Request {
