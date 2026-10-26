@@ -632,7 +632,7 @@
         "lastModified": 1792972887,
         "narHash": "sha256-8gmvCy32yo3b26oZGTWOaeHSQoCgeYOtyEu2mCebtg8=",
         "ref": "refs/heads/main",
-        "rev": "0af86540c284cebc0969f36d02f6510285200682",
+        "rev": "5167363c67f6ace2480aaf45cf2bb6d9a3bf3438",
         "revCount": 399,
         "type": "git",
         "url": "https://git.cmu.dev/ScottyLabs/kennel"
