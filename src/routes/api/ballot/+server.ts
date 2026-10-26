@@ -9,7 +9,9 @@ import { isVotingClosed, votingClosedResponse } from "../../../lib/server/voting
 // Both need `Authorization: Bearer <voter code>`.
 
 const collectedTeams = db.prepare(`
-  SELECT team_id FROM collections WHERE voter_email = ?
+  SELECT collections.team_id FROM collections
+  WHERE voter_email = ?
+    AND NOT EXISTS (SELECT 1 FROM team_disqualifications d WHERE d.team_id = collections.team_id)
 `);
 
 const ownTeams = db.prepare(`
@@ -50,7 +52,8 @@ function rankingProblem(email: string, ranked: string[]): string | null {
   if (ranked.length > MAX_RANKED) return `rank at most ${MAX_RANKED} teams`;
   if (new Set(ranked).size !== ranked.length) return "a team can only be ranked once";
   const collected = teamIds(collectedTeams.all(email));
-  if (ranked.some((id) => !collected.has(id))) return "you can only rank teams in your collection";
+  if (ranked.some((id) => !collected.has(id)))
+    return "you can only rank eligible teams in your collection";
   const own = teamIds(ownTeams.all(email));
   if (ranked.some((id) => own.has(id))) return "you can't rank your own team";
   return null;

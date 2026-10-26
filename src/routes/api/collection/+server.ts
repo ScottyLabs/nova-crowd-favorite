@@ -15,6 +15,7 @@ const selectCollection = db.prepare(`
   FROM collections
   JOIN teams ON teams.id = collections.team_id
   WHERE collections.voter_email = ? AND teams.active = 1
+    AND NOT EXISTS (SELECT 1 FROM team_disqualifications d WHERE d.team_id = teams.id)
   ORDER BY collections.scanned_at
 `);
 
@@ -23,6 +24,7 @@ const selectTeamByQr = db.prepare(`
   FROM qr_codes
   JOIN teams ON teams.id = qr_codes.team_id
   WHERE qr_codes.code = ? AND teams.active = 1
+    AND NOT EXISTS (SELECT 1 FROM team_disqualifications d WHERE d.team_id = teams.id)
 `);
 
 const isMember = db.prepare(`

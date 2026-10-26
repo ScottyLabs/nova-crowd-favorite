@@ -2,13 +2,13 @@ import type { DatabaseSync } from "node:sqlite";
 import { verifySignature } from "./hmac.ts";
 import { hashCode } from "./voter-code.ts";
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/u;
-const QR_CODE_PATTERN = /^[A-Za-z0-9_-]{4,128}$/u;
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/u;
+export const QR_CODE_PATTERN = /^[A-Za-z0-9_-]{4,128}$/u;
 const DEADLINE_PATTERN =
   /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/u;
 const MAX_BATCH_SIZE = 1000;
 
-function json(body: unknown, status = 200): Response {
+export function json(body: unknown, status = 200): Response {
   return Response.json(body, {
     status,
     headers: { "cache-control": "no-store" },
@@ -28,8 +28,11 @@ const organizerListings = {
       .prepare(`
       SELECT id, response_id AS responseId, name, members,
         repo_url AS repoUrl, slides_url AS slidesUrl, video_url AS videoUrl,
-        active, updated_at AS updatedAt
-      FROM teams ORDER BY id
+        active, updated_at AS updatedAt,
+        d.team_id IS NOT NULL AS disqualified, d.reason AS disqualificationReason
+      FROM teams
+      LEFT JOIN team_disqualifications d ON d.team_id = teams.id
+      ORDER BY teams.id
     `)
       .all()
       .map((team) => ({
@@ -41,6 +44,8 @@ const organizerListings = {
         slidesUrl: team.slidesUrl,
         videoUrl: team.videoUrl,
         active: team.active === 1,
+        disqualified: team.disqualified === 1,
+        disqualificationReason: team.disqualificationReason,
         updatedAt: team.updatedAt,
       }));
   },
@@ -80,7 +85,10 @@ export async function listOrganizerRecords(
   return json({ [resource]: organizerListings[resource](db) });
 }
 
-async function readBody(request: Request, secret: string): Promise<{ body: unknown } | Response> {
+export async function readBody(
+  request: Request,
+  secret: string,
+): Promise<{ body: unknown } | Response> {
   const raw = await request.text();
   const ok = await verifySignature(
     raw,
@@ -99,11 +107,11 @@ async function readBody(request: Request, secret: string): Promise<{ body: unkno
   }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function inTransaction<T>(db: DatabaseSync, action: () => T): T {
+export function inTransaction<T>(db: DatabaseSync, action: () => T): T {
   db.exec("BEGIN IMMEDIATE");
   try {
     const result = action();

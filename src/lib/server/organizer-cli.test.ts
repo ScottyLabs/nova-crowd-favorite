@@ -45,7 +45,12 @@ function signingTestServer(secret: string) {
   return server;
 }
 
-function runListCommand(resource: string, port: number, secret: string): Promise<string> {
+function runCommand(
+  command: string,
+  port: number,
+  secret: string,
+  args: string[] = [],
+): Promise<string> {
   const script = fileURLToPath(new URL("../../../scripts/organizer.ts", import.meta.url));
   return new Promise<string>((resolve, reject) => {
     execFile(
@@ -55,7 +60,8 @@ function runListCommand(resource: string, port: number, secret: string): Promise
         "--allow-env=APP_URL,SYNC_HMAC_SECRET",
         "--allow-net=127.0.0.1",
         script,
-        `list-${resource}`,
+        command,
+        ...args,
       ],
       {
         env: {
@@ -83,7 +89,7 @@ void test("list commands send signed GET requests without bodies", async () => {
   try {
     await Promise.all(
       ["voters", "teams", "ballots"].map(async (resource) => {
-        const stdout = await runListCommand(resource, address.port, secret);
+        const stdout = await runCommand(`list-${resource}`, address.port, secret);
         deepStrictEqual(JSON.parse(stdout), {
           method: "GET",
           path: `/api/organizer/${resource}`,
@@ -96,6 +102,74 @@ void test("list commands send signed GET requests without bodies", async () => {
     await new Promise<void>((resolve, reject) => {
       server.close((error) => {
         if (error instanceof Error) reject(error);
+        else resolve();
+      });
+    });
+  }
+});
+
+const recoveryCases = [
+  {
+    command: "reissue",
+    args: ["person@example.com"],
+    method: "POST",
+    path: "/api/organizer/voters/reissue",
+    body: { email: "person@example.com" },
+  },
+  {
+    command: "reset-ballot",
+    args: ["person@example.com"],
+    method: "DELETE",
+    path: "/api/organizer/ballots",
+    body: { email: "person@example.com" },
+  },
+  {
+    command: "unlink-qr",
+    args: ["sticker"],
+    method: "POST",
+    path: "/api/organizer/qr-codes/unlink",
+    body: { code: "sticker" },
+  },
+  {
+    command: "disqualify",
+    args: ["t1", "Rule violation"],
+    method: "PUT",
+    path: "/api/organizer/teams/disqualification",
+    body: { teamId: "t1", disqualified: true, reason: "Rule violation" },
+  },
+  {
+    command: "reinstate",
+    args: ["t1"],
+    method: "PUT",
+    path: "/api/organizer/teams/disqualification",
+    body: { teamId: "t1", disqualified: false },
+  },
+];
+
+void test("recovery CLI signs each target and payload, including DELETE bodies", async () => {
+  const secret = "test-only-secret";
+  const server = signingTestServer(secret);
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  const address = server.address();
+  ok(address !== null && typeof address === "object");
+  try {
+    await Promise.all(
+      recoveryCases.map(async ({ command, args, method, path, body }) => {
+        const output = await runCommand(command, address.port, secret, args);
+        deepStrictEqual(JSON.parse(output), {
+          method,
+          path,
+          body: JSON.stringify(body),
+          valid: true,
+        });
+      }),
+    );
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => {
+        if (error) reject(error);
         else resolve();
       });
     });

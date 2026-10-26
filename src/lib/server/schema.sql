@@ -52,3 +52,23 @@ CREATE TABLE IF NOT EXISTS settings (
   key    TEXT PRIMARY KEY,
   value  TEXT NOT NULL
 );
+
+-- Organizer decisions are separate from Sheet-managed team data.
+CREATE TABLE IF NOT EXISTS team_disqualifications (
+  team_id TEXT PRIMARY KEY REFERENCES teams(id),
+  reason TEXT NOT NULL
+);
+
+-- Keep the previous ballot when an organizer resets it.
+CREATE TABLE IF NOT EXISTS ballot_resets (
+  id INTEGER PRIMARY KEY,
+  voter_email TEXT NOT NULL REFERENCES voters(email),
+  rank_1 TEXT REFERENCES teams(id),
+  rank_2 TEXT REFERENCES teams(id),
+  rank_3 TEXT REFERENCES teams(id),
+  rank_4 TEXT REFERENCES teams(id),
+  rank_5 TEXT REFERENCES teams(id),
+  status TEXT NOT NULL,
+  submitted_at TEXT NOT NULL,
+  reset_at TEXT NOT NULL
+);

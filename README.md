@@ -19,6 +19,13 @@ deno task organizer list-voters
 deno task organizer list-teams
 deno task organizer list-ballots
 
+# Recover access or correct a mistake.
+deno task organizer reissue person@example.com
+deno task organizer reset-ballot person@example.com
+deno task organizer unlink-qr sticker-001
+deno task organizer disqualify TEAM_ID 'Rule violation'
+deno task organizer reinstate TEAM_ID
+
 # Export ballots for manual review/counting and a complete database backup.
 deno task organizer export-csv > ballots.csv
 deno task organizer export-db > nova-backup.db
@@ -38,7 +45,8 @@ deno task organizer open
 
 Send voter links privately; the command does not send email. Existing voters
 are rejected without changing their links.
-A voter can rank up to five teams, and submitting is final.
+A voter can rank up to five teams. Submitted ballots are locked unless an
+organizer resets them.
 
 Print each sticker as a QR containing its returned URL (`/t/<code>`).
 A team member opens their voter link and uses "Scan my team" to claim one
@@ -74,6 +82,10 @@ voter links are private and must not be shared publicly.
 | GET | `/api/organizer/ballots` | No body |
 | GET | `/api/organizer/export/ballots` | No body; downloads CSV |
 | GET | `/api/organizer/export/database` | No body; downloads SQLite database |
+| POST | `/api/organizer/voters/reissue` | `{"email":"person@example.com"}` |
+| DELETE | `/api/organizer/ballots` | `{"email":"person@example.com"}` |
+| POST | `/api/organizer/qr-codes/unlink` | `{"code":"sticker-001"}` |
+| PUT | `/api/organizer/teams/disqualification` | `{"teamId":"TEAM_ID","disqualified":true,"reason":"Rule violation"}` or `{"teamId":"TEAM_ID","disqualified":false}` |
 | POST | `/api/organizer/voters` | `{"emails":["person@example.com"]}` |
 | POST | `/api/organizer/qr-codes` | `{"codes":["sticker-001","sticker-002"]}` |
 | PUT | `/api/organizer/voting` | `{"closesAt":"2026-11-08T13:00:00-05:00"}` or `{"closesAt":null}` |
@@ -87,7 +99,8 @@ List requests sign an empty string as the body. They return `{ "voters": [...] }
 order (email for voters and ballots, ID for teams). Empty lists return `[]`.
 Voters include `email` and `createdAt`, never access codes or token hashes.
 Teams include their ID, Sheet response ID, display fields, links, active status,
-and update time. Ballots include `voterEmail`, `ranked` (ordered team IDs),
+`disqualified`, `disqualificationReason` (null when eligible), and update time.
+Ballots include `voterEmail`, `ranked` (ordered team IDs),
 `status`, and `updatedAt` (last draft save or submission time). Both drafts and
 submitted ballots are included; voters without a saved ballot have no ballot
 entry. Treat these responses as private: they contain emails and voting choices.
@@ -100,10 +113,12 @@ file bytes to stdout; use the redirections above to save them.
 
 The ballot CSV contains one row per saved ballot, ordered by voter email:
 `voter_email`, `status`, `updated_at`, followed by `rank_N_team_id`,
-`rank_N_team_name`, and `rank_N_team_active` for ranks 1-5. Active status is
-`true` or `false`; unfilled ranks have empty cells. Both drafts and submitted ballots
-are included, with inactive teams preserved. Filter `status` to `submitted`
-when counting votes. Voters who have never saved a ballot have no row.
+`rank_N_team_name`, `rank_N_team_active`, and `rank_N_team_disqualified` for
+ranks 1-5. Both status flags are `true` or `false`; unfilled ranks have empty
+cells. Both drafts and submitted ballots are included, with inactive teams
+preserved. Filter `status` to `submitted`
+when counting votes, and skip disqualified teams. Voters who have never saved
+a ballot have no row.
 `updated_at` is the last draft save or submission time. Names and active
 statuses reflect the database at export time. Spreadsheet formula-like cells
 are prefixed with an apostrophe so they are treated as text; the database
@@ -114,3 +129,32 @@ including committed writes in the WAL. It can be opened without accompanying
 `-wal` or `-shm` files. It contains emails, credential hashes, private notes,
 and ballots; keep it private. The CSV also contains emails and voting choices.
 Neither export changes voting data or sends data back to the Sheet.
+
+### Recovery operations
+
+Recovery requests sign the exact JSON body, including the target email, code,
+or team ID. Unknown targets return 404 and invalid inputs return 400.
+
+Reissuing a voter link invalidates the previous link and preserves their
+collections, ballot, and team claim. Send the new link privately.
+
+Resetting a ballot removes its current draft or submission so the voter can
+start again. The previous ranks, status, and timestamp are saved in
+`ballot_resets`, included in database exports; the response returns `resetId`.
+Collections and voter access are preserved. Resets do not reopen voting:
+organizers may reset a ballot after closing, but the voter cannot save or submit
+until voting is reopened. Repeating a reset before a new ballot exists returns 404.
+
+Unlinking a sticker clears its claim and returns the previous team, claimant,
+and claim time. The sticker can then be claimed again. Existing collections
+and votes stay attached to their original team; unlinking does not rewrite them.
+Unlinking an already-free sticker succeeds with a null previous claim.
+
+Disqualification is reversible and stored separately from Sheet data, so sync
+cannot clear it for the same team ID. It removes the team from voter collections
+and prevents saving new rankings containing it. Existing collections, notes,
+and ballot rankings are preserved in the database. Reinstating restores access
+for active teams. Disqualification does not submit, reset, or rewrite ballots;
+existing drafts may still be submitted with those rankings preserved. The team
+list includes the decision and reason, and each CSV rank includes the current
+disqualification flag. Reasons are optional and accept up to 1,000 characters.

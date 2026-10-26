@@ -14,6 +14,34 @@ let path: string;
 let method = "POST";
 let payload: unknown;
 switch (command) {
+  case "reissue":
+  case "reset-ballot":
+    if (args.length !== 1) {
+      throw new Error(`Usage: deno task organizer ${command} EMAIL`);
+    }
+    path = command === "reissue" ? "/api/organizer/voters/reissue" : "/api/organizer/ballots";
+    method = command === "reissue" ? "POST" : "DELETE";
+    payload = { email: args[0] };
+    break;
+  case "unlink-qr":
+    if (args.length !== 1) {
+      throw new Error("Usage: deno task organizer unlink-qr CODE");
+    }
+    path = "/api/organizer/qr-codes/unlink";
+    payload = { code: args[0] };
+    break;
+  case "disqualify":
+  case "reinstate":
+    if (
+      (command === "disqualify" && (args.length === 0 || args.length > 2)) ||
+      (command === "reinstate" && args.length !== 1)
+    ) {
+      throw new Error("Usage: deno task organizer disqualify TEAM_ID [REASON] | reinstate TEAM_ID");
+    }
+    path = "/api/organizer/teams/disqualification";
+    method = "PUT";
+    payload = { teamId: args[0], disqualified: command === "disqualify", reason: args[1] };
+    break;
   case "export-csv":
   case "export-db":
     if (args.length > 0) {
@@ -67,7 +95,7 @@ switch (command) {
     break;
   default:
     throw new Error(
-      "Usage: deno task organizer voters EMAIL... | list-voters | list-teams | list-ballots | export-csv | export-db | qr COUNT | register-qr CODE... | close ISO_TIMESTAMP | open",
+      "Usage: deno task organizer voters EMAIL... | list-voters | list-teams | list-ballots | reissue EMAIL | reset-ballot EMAIL | unlink-qr CODE | disqualify TEAM_ID [REASON] | reinstate TEAM_ID | export-csv | export-db | qr COUNT | register-qr CODE... | close ISO_TIMESTAMP | open",
     );
 }
 

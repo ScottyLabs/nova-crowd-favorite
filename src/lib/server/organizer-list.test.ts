@@ -67,6 +67,7 @@ function seedListings(db: DatabaseSync): void {
       INSERT INTO voters VALUES ('a@example.com', NULL, '2026-01-02');
       INSERT INTO teams (id, response_id, name, members, active, updated_at)
         VALUES ('t1', 'r1', 'Inactive team', 'Member', 0, '2026-01-01');
+      INSERT INTO team_disqualifications VALUES ('t1', 'Rule violation');
       INSERT INTO ballots (voter_email, rank_1, status, submitted_at)
         VALUES ('z@example.com', 't1', 'submitted', '2026-01-03');
       INSERT INTO ballots (voter_email, status, submitted_at)
@@ -97,6 +98,8 @@ void test("organizer listings include inactive teams and drafts without exposing
           slidesUrl: null,
           videoUrl: null,
           active: false,
+          disqualified: true,
+          disqualificationReason: "Rule violation",
           updatedAt: "2026-01-01",
         },
       ],

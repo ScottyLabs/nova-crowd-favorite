@@ -13,6 +13,7 @@ const ballotColumns = [
     `rank_${rank}_team_id`,
     `rank_${rank}_team_name`,
     `rank_${rank}_team_active`,
+    `rank_${rank}_team_disqualified`,
   ]),
 ];
 
@@ -28,7 +29,10 @@ function ballotCsv(db: DatabaseSync): string {
     (rank) => `
     b.rank_${rank} AS rank_${rank}_team_id,
     t${rank}.name AS rank_${rank}_team_name,
-    CASE t${rank}.active WHEN 1 THEN 'true' WHEN 0 THEN 'false' END AS rank_${rank}_team_active
+    CASE t${rank}.active WHEN 1 THEN 'true' WHEN 0 THEN 'false' END AS rank_${rank}_team_active,
+    CASE WHEN t${rank}.id IS NULL THEN NULL
+      WHEN EXISTS (SELECT 1 FROM team_disqualifications d WHERE d.team_id = t${rank}.id)
+      THEN 'true' ELSE 'false' END AS rank_${rank}_team_disqualified
   `,
   );
   const joins = ranks.map((rank) => `LEFT JOIN teams t${rank} ON t${rank}.id = b.rank_${rank}`);

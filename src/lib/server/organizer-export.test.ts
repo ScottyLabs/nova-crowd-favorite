@@ -39,6 +39,7 @@ function seed(db: DatabaseSync): void {
     INSERT INTO ballots (voter_email, rank_1, rank_2, status, submitted_at) VALUES
       ('v@example.com', 't2', 't1', 'submitted', '2026-01-02'),
       ('draft@example.com', 't1', NULL, 'draft', '2026-01-01');
+    INSERT INTO team_disqualifications VALUES ('t2', 'Rule violation');
     INSERT INTO settings VALUES ('voting_closes_at', '2026-12-01T00:00:00Z');
   `);
 }
@@ -78,12 +79,12 @@ void test("CSV exports all saved ballots in stable order with rank metadata and 
     const csv = await response.text();
     const lines = csv.trimEnd().split("\r\n");
     strictEqual(lines.length, 3);
-    match(lines[1], /^"draft@example.com","draft","2026-01-01","t1","Team one","true"/u);
+    match(lines[1], /^"draft@example.com","draft","2026-01-01","t1","Team one","true","false"/u);
     match(
       lines[2],
-      /^"v@example.com","submitted","2026-01-02","t2","Inactive team","false","t1","Team one","true"/u,
+      /^"v@example.com","submitted","2026-01-02","t2","Inactive team","false","true","t1","Team one","true","false"/u,
     );
-    ok(lines[2].endsWith(',"","","","","","","","",""'));
+    ok(lines[2].endsWith(',"","","","","","","","","","","",""'));
     ok(!csv.includes("private-hash"));
     ok(!csv.includes("Private note"));
     ok(!csv.includes("unsaved@example.com"));
@@ -114,7 +115,7 @@ void test("empty CSV has a header and no data rows", async () => {
     const csv = await response.text();
     strictEqual(csv.split("\r\n").length, 2);
     match(csv, /^voter_email,status,updated_at,rank_1_team_id,/u);
-    ok(csv.endsWith("rank_5_team_active\r\n"));
+    ok(csv.endsWith("rank_5_team_disqualified\r\n"));
   } finally {
     db.close();
   }
@@ -147,6 +148,8 @@ void test("database export restores all tables including committed WAL data", as
         "collections",
         "ballots",
         "settings",
+        "team_disqualifications",
+        "ballot_resets",
       ];
       for (const table of tables) {
         deepStrictEqual(
