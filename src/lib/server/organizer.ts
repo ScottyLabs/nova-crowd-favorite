@@ -9,7 +9,75 @@ const DEADLINE_PATTERN =
 const MAX_BATCH_SIZE = 1000;
 
 function json(body: unknown, status = 200): Response {
-  return Response.json(body, { status, headers: { "cache-control": "no-store" } });
+  return Response.json(body, {
+    status,
+    headers: { "cache-control": "no-store" },
+  });
+}
+
+const organizerListings = {
+  voters(db: DatabaseSync) {
+    return db
+      .prepare(`
+      SELECT email, created_at AS createdAt FROM voters ORDER BY email
+    `)
+      .all();
+  },
+  teams(db: DatabaseSync) {
+    return db
+      .prepare(`
+      SELECT id, response_id AS responseId, name, members,
+        repo_url AS repoUrl, slides_url AS slidesUrl, video_url AS videoUrl,
+        active, updated_at AS updatedAt
+      FROM teams ORDER BY id
+    `)
+      .all()
+      .map((team) => ({
+        id: team.id,
+        responseId: team.responseId,
+        name: team.name,
+        members: team.members,
+        repoUrl: team.repoUrl,
+        slidesUrl: team.slidesUrl,
+        videoUrl: team.videoUrl,
+        active: team.active === 1,
+        updatedAt: team.updatedAt,
+      }));
+  },
+  ballots(db: DatabaseSync) {
+    return db
+      .prepare(`
+      SELECT voter_email AS voterEmail, rank_1, rank_2, rank_3, rank_4, rank_5,
+        status, submitted_at AS updatedAt
+      FROM ballots ORDER BY voter_email
+    `)
+      .all()
+      .map((ballot) => ({
+        voterEmail: ballot.voterEmail,
+        status: ballot.status,
+        updatedAt: ballot.updatedAt,
+        ranked: [ballot.rank_1, ballot.rank_2, ballot.rank_3, ballot.rank_4, ballot.rank_5].filter(
+          (id): id is string => typeof id === "string",
+        ),
+      }));
+  },
+};
+
+/** Read-only organizer listings sign an empty request body. */
+export async function listOrganizerRecords(
+  db: DatabaseSync,
+  request: Request,
+  secret: string,
+  resource: keyof typeof organizerListings,
+): Promise<Response> {
+  const valid = await verifySignature(
+    "",
+    request.headers.get("x-timestamp"),
+    request.headers.get("x-signature"),
+    secret,
+  );
+  if (!valid) return json({ error: "invalid signature" }, 401);
+  return json({ [resource]: organizerListings[resource](db) });
 }
 
 async function readBody(request: Request, secret: string): Promise<{ body: unknown } | Response> {
@@ -67,8 +135,9 @@ export async function addVoters(
 ): Promise<Response> {
   const input = await readBody(request, secret);
   if (input instanceof Response) return input;
-  if (origin === undefined || origin.length === 0)
+  if (origin === undefined || origin.length === 0) {
     return json({ error: "APP_URL is not configured" }, 500);
+  }
   const body = input.body;
   if (!isVoterBody(body)) {
     return json({ error: "provide emails (1-1000 addresses)" }, 400);
@@ -77,7 +146,11 @@ export async function addVoters(
   const voters = await Promise.all(
     emails.map(async (email) => {
       const code = crypto.randomUUID();
-      return { email, hash: await hashCode(code), url: new URL(`/v/${code}`, origin).href };
+      return {
+        email,
+        hash: await hashCode(code),
+        url: new URL(`/v/${code}`, origin).href,
+      };
     }),
   );
   // Compute hashes before starting the SQLite transaction.
@@ -122,14 +195,23 @@ export async function registerQrCodes(
 ): Promise<Response> {
   const input = await readBody(request, secret);
   if (input instanceof Response) return input;
-  if (origin === undefined || origin.length === 0)
+  if (origin === undefined || origin.length === 0) {
     return json({ error: "APP_URL is not configured" }, 500);
+  }
   const body = input.body;
   if (!isQrBody(body)) {
-    return json({ error: "provide codes (1-1000 URL-safe strings, 4-128 characters each)" }, 400);
+    return json(
+      {
+        error: "provide codes (1-1000 URL-safe strings, 4-128 characters each)",
+      },
+      400,
+    );
   }
   const codes = [...new Set(body.codes)];
-  const stickers = codes.map((code) => ({ code, url: new URL(`/t/${code}`, origin).href }));
+  const stickers = codes.map((code) => ({
+    code,
+    url: new URL(`/t/${code}`, origin).href,
+  }));
   const created = inTransaction(db, () => {
     const insert = db.prepare(
       "INSERT INTO qr_codes (code) VALUES (?) ON CONFLICT(code) DO NOTHING",
@@ -148,8 +230,9 @@ function isDeadlineBody(value: unknown): value is { closesAt: string | null } {
     typeof value.closesAt !== "string" ||
     !DEADLINE_PATTERN.test(value.closesAt) ||
     !Number.isFinite(Date.parse(value.closesAt))
-  )
+  ) {
     return false;
+  }
   const day = value.closesAt.slice(0, 10);
   return new Date(day).toISOString().slice(0, 10) === day;
 }
@@ -179,5 +262,8 @@ export async function setVotingDeadline(
       ON CONFLICT(key) DO UPDATE SET value = excluded.value
     `).run(closesAt);
   }
-  return json({ closesAt, closed: closesAt !== null && Date.now() >= Date.parse(closesAt) });
+  return json({
+    closesAt,
+    closed: closesAt !== null && Date.now() >= Date.parse(closesAt),
+  });
 }

@@ -14,6 +14,11 @@ export APP_URL=https://crowd-favorite.nova.scottylabs.org
 # Add voters and print their personal voting links.
 deno task organizer voters person@example.com other@example.com
 
+# Inspect voters, teams (including inactive teams), and saved ballots.
+deno task organizer list-voters
+deno task organizer list-teams
+deno task organizer list-ballots
+
 # Generate and register 50 stickers; print their codes and QR URLs.
 deno task organizer qr 50
 
@@ -60,6 +65,9 @@ voter links are private and must not be shared publicly.
 
 | Method | Endpoint | JSON body |
 | --- | --- | --- |
+| GET | `/api/organizer/voters` | No body |
+| GET | `/api/organizer/teams` | No body |
+| GET | `/api/organizer/ballots` | No body |
 | POST | `/api/organizer/voters` | `{"emails":["person@example.com"]}` |
 | POST | `/api/organizer/qr-codes` | `{"codes":["sticker-001","sticker-002"]}` |
 | PUT | `/api/organizer/voting` | `{"closesAt":"2026-11-08T13:00:00-05:00"}` or `{"closesAt":null}` |
@@ -67,3 +75,13 @@ voter links are private and must not be shared publicly.
 Voter and sticker batches accept up to 1,000 entries. Registering an existing
 sticker preserves its team claim. A past deadline closes voting immediately;
 `null` reopens it. Only submitted ballots count; there is no results screen.
+
+List requests sign an empty string as the body. They return `{ "voters": [...] }`,
+`{ "teams": [...] }`, or `{ "ballots": [...] }`, with all records in a stable
+order (email for voters and ballots, ID for teams). Empty lists return `[]`.
+Voters include `email` and `createdAt`, never access codes or token hashes.
+Teams include their ID, Sheet response ID, display fields, links, active status,
+and update time. Ballots include `voterEmail`, `ranked` (ordered team IDs),
+`status`, and `updatedAt` (last draft save or submission time). Both drafts and
+submitted ballots are included; voters without a saved ballot have no ballot
+entry. Treat these responses as private: they contain emails and voting choices.

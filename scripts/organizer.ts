@@ -14,8 +14,19 @@ let path: string;
 let method = "POST";
 let payload: unknown;
 switch (command) {
+  case "list-voters":
+  case "list-teams":
+  case "list-ballots":
+    if (args.length > 0) {
+      throw new Error(`Usage: deno task organizer ${command}`);
+    }
+    path = `/api/organizer/${command.slice(5)}`;
+    method = "GET";
+    break;
   case "voters":
-    if (args.length === 0) throw new Error("Usage: deno task organizer voters EMAIL...");
+    if (args.length === 0) {
+      throw new Error("Usage: deno task organizer voters EMAIL...");
+    }
     path = "/api/organizer/voters";
     payload = { emails: args };
     break;
@@ -25,11 +36,15 @@ switch (command) {
       throw new Error("Usage: deno task organizer qr COUNT (1-1000)");
     }
     path = "/api/organizer/qr-codes";
-    payload = { codes: Array.from({ length: count }, () => crypto.randomUUID()) };
+    payload = {
+      codes: Array.from({ length: count }, () => crypto.randomUUID()),
+    };
     break;
   }
   case "register-qr":
-    if (args.length === 0) throw new Error("Usage: deno task organizer register-qr CODE...");
+    if (args.length === 0) {
+      throw new Error("Usage: deno task organizer register-qr CODE...");
+    }
     path = "/api/organizer/qr-codes";
     payload = { codes: args };
     break;
@@ -44,11 +59,11 @@ switch (command) {
     break;
   default:
     throw new Error(
-      "Usage: deno task organizer voters EMAIL... | qr COUNT | register-qr CODE... | close ISO_TIMESTAMP | open",
+      "Usage: deno task organizer voters EMAIL... | list-voters | list-teams | list-ballots | qr COUNT | register-qr CODE... | close ISO_TIMESTAMP | open",
     );
 }
 
-const body = JSON.stringify(payload);
+const body = method === "GET" ? "" : JSON.stringify(payload);
 const timestamp = String(Date.now());
 const enc = new TextEncoder();
 const key = await crypto.subtle.importKey(
@@ -68,8 +83,10 @@ const response = await fetch(new URL(path, site), {
     "x-timestamp": timestamp,
     "x-signature": Array.from(signature, (byte) => byte.toString(16).padStart(2, "0")).join(""),
   },
-  body,
+  body: method === "GET" ? undefined : body,
 });
 const result: unknown = await response.json();
-if (!response.ok) throw new Error(`HTTP ${response.status}: ${JSON.stringify(result)}`);
+if (!response.ok) {
+  throw new Error(`HTTP ${response.status}: ${JSON.stringify(result)}`);
+}
 console.log(JSON.stringify(result, null, 2));
