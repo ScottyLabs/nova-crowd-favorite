@@ -78,7 +78,7 @@ function runCommand(
   });
 }
 
-void test("list commands send signed GET requests without bodies", async () => {
+void test("list and tally commands send signed GET requests without bodies", async () => {
   const secret = "test-only-secret";
   const server = signingTestServer(secret);
   await new Promise<void>((resolve) => {
@@ -88,8 +88,9 @@ void test("list commands send signed GET requests without bodies", async () => {
   ok(address !== null && typeof address === "object");
   try {
     await Promise.all(
-      ["voters", "teams", "ballots"].map(async (resource) => {
-        const stdout = await runCommand(`list-${resource}`, address.port, secret);
+      ["voters", "teams", "ballots", "tally"].map(async (resource) => {
+        const command = resource === "tally" ? "tally" : `list-${resource}`;
+        const stdout = await runCommand(command, address.port, secret);
         deepStrictEqual(JSON.parse(stdout), {
           method: "GET",
           path: `/api/organizer/${resource}`,

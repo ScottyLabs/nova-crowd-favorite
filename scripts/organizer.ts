@@ -14,6 +14,13 @@ let path: string;
 let method = "POST";
 let payload: unknown;
 switch (command) {
+  case "tally":
+    if (args.length > 0) {
+      throw new Error("Usage: deno task organizer tally");
+    }
+    path = "/api/organizer/tally";
+    method = "GET";
+    break;
   case "reissue":
   case "reset-ballot":
     if (args.length !== 1) {
@@ -95,7 +102,7 @@ switch (command) {
     break;
   default:
     throw new Error(
-      "Usage: deno task organizer voters EMAIL... | list-voters | list-teams | list-ballots | reissue EMAIL | reset-ballot EMAIL | unlink-qr CODE | disqualify TEAM_ID [REASON] | reinstate TEAM_ID | export-csv | export-db | qr COUNT | register-qr CODE... | close ISO_TIMESTAMP | open",
+      "Usage: deno task organizer voters EMAIL... | list-voters | list-teams | list-ballots | tally | reissue EMAIL | reset-ballot EMAIL | unlink-qr CODE | disqualify TEAM_ID [REASON] | reinstate TEAM_ID | export-csv | export-db | qr COUNT | register-qr CODE... | close ISO_TIMESTAMP | open",
     );
 }
 

@@ -6,7 +6,10 @@
 
 Run from this repository with Deno installed and the production
 `SYNC_HMAC_SECRET` loaded from OpenBao. The commands sign requests and update
-the deployed app.
+the deployed app. Have a maintainer prepare this repository, install Deno,
+and load the secret into your terminal before the event. Keep that terminal
+open and run the commands from this repository's folder. You do not need to
+write API requests or use SQLite.
 
 ```sh
 export APP_URL=https://crowd-favorite.nova.scottylabs.org
@@ -18,6 +21,9 @@ deno task organizer voters person@example.com other@example.com
 deno task organizer list-voters
 deno task organizer list-teams
 deno task organizer list-ballots
+
+# Count submitted ballots with IRV; voting data is unchanged.
+deno task organizer tally
 
 # Recover access or correct a mistake.
 deno task organizer reissue person@example.com
@@ -52,6 +58,35 @@ Print each sticker as a QR containing its returned URL (`/t/<code>`).
 A team member opens their voter link and uses "Scan my team" to claim one
 sticker. Their email must match a team member email in the Sheet.
 
+## Running the event
+
+1. Confirm `APP_URL` points to the intended app, then run
+   `deno task organizer list-teams`. An empty list means no teams are synced yet;
+   an error means setup needs attention before the event.
+1. Set up Sheet sync below and check `list-teams` again. Add voters with
+   `voters EMAIL...` and send each returned personal link to that voter.
+1. Generate stickers with `qr COUNT`. Turn each returned URL into a printed QR
+   code. Team members open their personal link and use **Scan my team** to
+   link a sticker; other voters scan it to collect and rank that team.
+1. Set the closing time with `close`, including the timezone. After that time,
+   run `tally`. Only submitted ballots count, so remind voters to submit.
+1. Check `provisional` is `false` before announcing a result. For
+   `status: "winner"`, find the entry in `candidates` whose `id` matches
+   `winnerId`; its `name` is the winning team. For `elimination-tie`, no winner
+   was chosen: export the CSV for organizer review. `no-votes` means no submitted
+   ballots have an eligible ranked team; check `list-ballots` and disqualifications.
+1. Save `export-csv` and `export-db` using the commands above. Keep both private.
+
+`TEAM_ID` in recovery examples means the `id` from `list-teams`, not the team
+name. `CODE` means a sticker's `code`, not its full URL. After a link reissue,
+send the new URL to the voter; their old link stops working. After a ballot
+reset, ask the voter to refresh and submit again before voting closes.
+
+If commands report HTTP 401, ask a maintainer to check the secret and computer
+clock. HTTP 404 or 405 on a documented endpoint can mean the app has not been
+updated; changing the command will not deploy it. HTTP 409 when adding an
+existing voter means their link was preserved; use `reissue` if they lost it.
+
 ## Sync teams
 
 In the submission Sheet, open **Extensions > Apps Script** and paste
@@ -80,6 +115,7 @@ voter links are private and must not be shared publicly.
 | GET | `/api/organizer/voters` | No body |
 | GET | `/api/organizer/teams` | No body |
 | GET | `/api/organizer/ballots` | No body |
+| GET | `/api/organizer/tally` | No body; returns IRV results |
 | GET | `/api/organizer/export/ballots` | No body; downloads CSV |
 | GET | `/api/organizer/export/database` | No body; downloads SQLite database |
 | POST | `/api/organizer/voters/reissue` | `{"email":"person@example.com"}` |
@@ -158,3 +194,36 @@ for active teams. Disqualification does not submit, reset, or rewrite ballots;
 existing drafts may still be submitted with those rankings preserved. The team
 list includes the decision and reason, and each CSV rank includes the current
 disqualification flag. Reasons are optional and accept up to 1,000 characters.
+
+### Ranked-choice tally (IRV)
+
+Run `deno task organizer tally` to calculate a single winner from the current
+submitted ballots. The endpoint is read-only and signs an empty body like the
+list endpoints. It reads ballots, teams, disqualifications, and the deadline
+from one database snapshot. It does not close voting or store a final result.
+
+Each round counts a ballot for its highest-ranked remaining candidate. A team
+wins with strictly more than half of the continuing (non-exhausted) ballots.
+Otherwise, the unique lowest-count team is eliminated and its ballots transfer
+to their next remaining preference. Ballots with no remaining preference are
+exhausted and excluded from the majority denominator.
+
+Disqualified teams are skipped, allowing their ballots to transfer. Inactive
+teams remain eligible: removal from the Sheet is not disqualification.
+Candidates are eligible teams appearing anywhere in submitted rankings;
+unranked teams do not participate. Drafts and archived reset ballots never count.
+
+If multiple teams share the lowest count, counting stops with
+`status: "elimination-tie"`, `winnerId: null`, and `tiedTeamIds`. This applies
+to zero-vote ties too. These IDs identify a tie for elimination, not necessarily
+a tie for first place. No team is selected by ID, name, or randomness. Use the
+CSV export for manual resolution; do not disqualify teams just to break a tie.
+A tally with no eligible preferences returns `status: "no-votes"` and no rounds.
+
+The response includes `generatedAt`, `provisional`, `submittedBallots`, candidate
+IDs/names/active flags, disqualified teams and reasons, and every round's
+`counts`, `continuingBallots`, `exhaustedBallots`, and `eliminatedTeamId`.
+A successful result has `status: "winner"` and `winnerId`. Results are
+provisional while voting is open; a passed closing deadline sets
+`provisional: false`. Reopening voting makes subsequent tallies provisional.
+Names and eligibility reflect the database snapshot used for that tally.
