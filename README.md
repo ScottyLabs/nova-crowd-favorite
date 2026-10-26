@@ -72,11 +72,11 @@ sticker. Their email must match a team member email in the Sheet.
    link a sticker; other voters scan it to collect and rank that team.
 1. Set the closing time with `close`, including the timezone. After that time,
    run `tally`. Only submitted ballots count, so remind voters to submit.
-1. Check `provisional` is `false` before announcing a result. For
-   `status: "winner"`, find the entry in `candidates` whose `id` matches
-   `winnerId`; its `name` is the winning team. For `elimination-tie`, no winner
-   was chosen: export the CSV for organizer review. `no-votes` means no submitted
-   ballots have an eligible ranked team; check `list-ballots` and disqualifications.
+1. Check `provisional` is `false` before announcing a result. Read `ranking`
+   for the ordered places, including shared ranks. `status: "winner"` means
+   ranking completed. `winnerId` identifies a sole first-place team; shared
+   first place uses `winnerId: null` and `tiedTeamIds`. `no-votes` means no
+   submitted ballots have an eligible ranked team.
 1. Save `export-csv` and `export-db` using the commands above. Keep both private.
 
 `TEAM_ID` in recovery examples means the `id` from `list-teams`, not the team
@@ -220,14 +220,13 @@ teams remain eligible: removal from the Sheet is not disqualification.
 Candidates are eligible teams appearing anywhere in submitted rankings;
 unranked teams do not participate. Drafts and archived reset ballots never count.
 
-If multiple teams share the lowest count, counting stops with
-`status: "elimination-tie"` and `tiedTeamIds`. This applies to zero-vote ties too.
-These IDs identify a tie for elimination, not necessarily a tie for first place.
-`ranking` preserves the places already selected. `unrankedTeamIds` lists all
-teams whose places remain unresolved, including teams eliminated during the
-unfinished election. `winnerId` retains first place if already selected;
-otherwise it is null. No team is selected by ID, name, or randomness. Use the
-CSV export for manual resolution; do not disqualify teams just to break a tie.
+If multiple teams share the lowest count, assign all of them the current
+place, remove them from every ballot, and rerun IRV for the remaining teams.
+This organizer-defined rule also applies to zero-vote ties and ties for
+elimination, even when another team has more votes. Shared places use competition
+ranking: two teams sharing first are followed by third (1, 1, 3).
+Each tied election retains `status: "elimination-tie"` and `tiedTeamIds` in
+`elections` so the decision can be audited. Counting continues after the tie.
 No eligible preferences returns `status: "no-votes"` and no elections.
 
 The response includes `generatedAt`, `provisional`, `submittedBallots`, candidate
@@ -235,8 +234,9 @@ IDs/names/active flags, disqualified teams and reasons, and `elections`. Each
 election contains its `rank`, `status`, `winnerId`, `tiedTeamIds`, and `rounds`.
 Each round has `counts`, `continuingBallots`, `exhaustedBallots`, and
 `eliminatedTeamId`. Each `ranking` entry contains `rank`, `teamId`, and `name`.
-A complete ranking has `status: "winner"`, a `winnerId`, and no
-`unrankedTeamIds`. Results are provisional while voting is open; a passed
+A complete ranking has `status: "winner"` and no `unrankedTeamIds`.
+`winnerId` identifies a sole first-place team. When first place is shared,
+`winnerId` is null and top-level `tiedTeamIds` lists the first-place teams. Results are provisional while voting is open; a passed
 closing deadline sets `provisional: false`. Reopening voting makes subsequent
 tallies provisional. Names and eligibility reflect the database snapshot used
 for that tally.

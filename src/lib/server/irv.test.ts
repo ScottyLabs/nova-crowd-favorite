@@ -62,31 +62,42 @@ void test("exhausted ballots leave the majority denominator", () => {
   strictEqual(result.elections[0].rounds[0].eliminatedTeamId, "c");
 });
 
-void test("half the continuing votes is not a majority and ties do not invent a ranking", () => {
+void test("tied elimination candidates share the current rank and counting continues", () => {
   const result = tallyIrv([...copies(2, ["a"]), ["b"], ["c"]]);
-  strictEqual(result.status, "elimination-tie");
+  strictEqual(result.status, "winner");
   strictEqual(result.winnerId, null);
-  deepStrictEqual(result.ranking, []);
+  deepStrictEqual(result.ranking, [
+    { rank: 1, teamId: "b" },
+    { rank: 1, teamId: "c" },
+    { rank: 3, teamId: "a" },
+  ]);
   deepStrictEqual(result.tiedTeamIds, ["b", "c"]);
-  deepStrictEqual(result.unrankedTeamIds, ["a", "b", "c"]);
+  deepStrictEqual(result.unrankedTeamIds, []);
   strictEqual(result.elections[0].rounds[0].eliminatedTeamId, null);
 });
 
-void test("final equal counts and tied zero-vote candidates are not broken arbitrarily", () => {
-  deepStrictEqual(
-    tallyIrv([
-      ["b", "a"],
-      ["a", "b"],
-    ]).tiedTeamIds,
+void test("equal final counts and zero-vote ties share a rank without arbitrary ordering", () => {
+  const result = tallyIrv([
+    ["b", "a"],
     ["a", "b"],
-  );
-  deepStrictEqual(
-    tallyIrv([
-      ["a", "c"],
-      ["b", "d"],
-    ]).tiedTeamIds,
-    ["c", "d"],
-  );
+  ]);
+  deepStrictEqual(result.ranking, [
+    { rank: 1, teamId: "a" },
+    { rank: 1, teamId: "b" },
+  ]);
+  strictEqual(result.winnerId, null);
+  deepStrictEqual(result.tiedTeamIds, ["a", "b"]);
+  const zero = tallyIrv([
+    ["a", "c"],
+    ["b", "d"],
+  ]);
+  deepStrictEqual(zero.ranking, [
+    { rank: 1, teamId: "c" },
+    { rank: 1, teamId: "d" },
+    { rank: 3, teamId: "a" },
+    { rank: 3, teamId: "b" },
+  ]);
+  deepStrictEqual(zero.unrankedTeamIds, []);
 });
 
 void test("no eligible preferences produces an empty ranking", () => {
@@ -149,13 +160,18 @@ void test("each place is selected by IRV rather than reversing the first elimina
   ]);
 });
 
-void test("a tie for a later place preserves earlier winners and stops there", () => {
+void test("a tie for a later place preserves earlier winners and continues after the shared rank", () => {
   const result = tallyIrv([...copies(5, ["a"]), ...copies(2, ["b"]), ...copies(2, ["c"]), ["d"]]);
-  strictEqual(result.status, "elimination-tie");
+  strictEqual(result.status, "winner");
   strictEqual(result.winnerId, "a");
-  deepStrictEqual(result.ranking, [{ rank: 1, teamId: "a" }]);
-  deepStrictEqual(result.tiedTeamIds, ["b", "c"]);
-  deepStrictEqual(result.unrankedTeamIds, ["b", "c", "d"]);
+  deepStrictEqual(result.ranking, [
+    { rank: 1, teamId: "a" },
+    { rank: 2, teamId: "b" },
+    { rank: 2, teamId: "c" },
+    { rank: 4, teamId: "d" },
+  ]);
+  deepStrictEqual(result.tiedTeamIds, []);
+  deepStrictEqual(result.unrankedTeamIds, []);
   strictEqual(result.elections[1].rank, 2);
   deepStrictEqual(
     result.elections[1].rounds.map((round) => round.eliminatedTeamId),

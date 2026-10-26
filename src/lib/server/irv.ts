@@ -72,25 +72,25 @@ export function tallyIrv(ballots: string[][]): IrvResult {
   const elections: IrvResult["elections"] = [];
   let preferences = ballots;
   let status: IrvResult["status"] = "no-votes";
-  let tiedTeamIds: string[] = [];
   while (remaining.size > 0) {
     const election = electWinner(preferences);
     const rank = ranking.length + 1;
     elections.push({ rank, ...election });
     status = election.status;
-    if (election.winnerId === null) {
-      tiedTeamIds = election.tiedTeamIds;
-      break;
+    const selected = election.winnerId === null ? election.tiedTeamIds : [election.winnerId];
+    if (selected.length === 0) break;
+    for (const teamId of selected) {
+      ranking.push({ rank, teamId });
+      remaining.delete(teamId);
     }
-    const teamId = election.winnerId;
-    ranking.push({ rank, teamId });
-    remaining.delete(teamId);
-    preferences = preferences.map((ballot) => ballot.filter((id) => id !== teamId));
+    preferences = preferences.map((ballot) => ballot.filter((id) => !selected.includes(id)));
+    status = "winner";
   }
+  const firstPlace = ranking.filter((entry) => entry.rank === 1).map((entry) => entry.teamId);
   return {
     status,
-    winnerId: ranking[0]?.teamId ?? null,
-    tiedTeamIds,
+    winnerId: firstPlace.length === 1 ? firstPlace[0] : null,
+    tiedTeamIds: firstPlace.length > 1 ? firstPlace : [],
     ranking,
     unrankedTeamIds: [...remaining],
     elections,
