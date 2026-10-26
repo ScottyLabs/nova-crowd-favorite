@@ -78,10 +78,10 @@ void test("CSV exports all saved ballots in stable order with rank metadata and 
     const csv = await response.text();
     const lines = csv.trimEnd().split("\r\n");
     strictEqual(lines.length, 3);
-    match(lines[1], /^"draft@example.com","draft","2026-01-01","t1","Team one","1"/u);
+    match(lines[1], /^"draft@example.com","draft","2026-01-01","t1","Team one","true"/u);
     match(
       lines[2],
-      /^"v@example.com","submitted","2026-01-02","t2","Inactive team","0","t1","Team one","1"/u,
+      /^"v@example.com","submitted","2026-01-02","t2","Inactive team","false","t1","Team one","true"/u,
     );
     ok(lines[2].endsWith(',"","","","","","","","",""'));
     ok(!csv.includes("private-hash"));

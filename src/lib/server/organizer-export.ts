@@ -28,7 +28,7 @@ function ballotCsv(db: DatabaseSync): string {
     (rank) => `
     b.rank_${rank} AS rank_${rank}_team_id,
     t${rank}.name AS rank_${rank}_team_name,
-    t${rank}.active AS rank_${rank}_team_active
+    CASE t${rank}.active WHEN 1 THEN 'true' WHEN 0 THEN 'false' END AS rank_${rank}_team_active
   `,
   );
   const joins = ranks.map((rank) => `LEFT JOIN teams t${rank} ON t${rank}.id = b.rank_${rank}`);

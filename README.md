@@ -101,7 +101,7 @@ file bytes to stdout; use the redirections above to save them.
 The ballot CSV contains one row per saved ballot, ordered by voter email:
 `voter_email`, `status`, `updated_at`, followed by `rank_N_team_id`,
 `rank_N_team_name`, and `rank_N_team_active` for ranks 1-5. Active status is
-`1` or `0`; unfilled ranks have empty cells. Both drafts and submitted ballots
+`true` or `false`; unfilled ranks have empty cells. Both drafts and submitted ballots
 are included, with inactive teams preserved. Filter `status` to `submitted`
 when counting votes. Voters who have never saved a ballot have no row.
 `updated_at` is the last draft save or submission time. Names and active
