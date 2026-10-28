@@ -2,6 +2,8 @@
 
 <https://crowd-favorite.nova.scottylabs.org>
 
+For a facilitated test session, use the [bug testing runbook](BUG_TESTING.md).
+
 ## Organizer commands
 
 Run from this repository with Deno installed and the production
