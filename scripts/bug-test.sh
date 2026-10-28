@@ -17,12 +17,9 @@ printf 'export APP_URL=%q\nexport SYNC_HMAC_SECRET=%q\n' \
   "$APP_URL" "$SYNC_HMAC_SECRET" > "$session_dir/organizer-env.sh"
 chmod 600 "$session_dir/organizer-env.sh"
 
-# Add test teams, voters, and stickers to the new database.
-deno run --allow-read --allow-write scripts/bug-test-fixtures.ts "$DATABASE_PATH" "$session_dir"
-
 printf 'Test database: %s\n' "$DATABASE_PATH"
 printf 'Organizer terminal: source %s/organizer-env.sh\n' "$session_dir"
-printf 'Voter and sticker links: %s/links.html\n' "$session_dir"
+printf 'Add demo teams: %s/api/dev/seed\n' "$APP_URL"
 printf 'Stop with Ctrl+C. Files stay in %s until deleted or cleared by the system.\n' "$session_dir"
 
 exec deno task dev --host 127.0.0.1 --port 5174 --strictPort
