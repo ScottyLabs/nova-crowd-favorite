@@ -27,7 +27,9 @@
 	let ballot = $state<Ballot | null>(null);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
-	let confirming = $state(false);
+	let confirmationDialog = $state<HTMLDialogElement | null>(null);
+	let submissionError = $state<string | null>(null);
+	let savingRankings = $state(0);
 	let submitting = $state(false);
 	let myTeam = $state<MyTeam | null>(null);
 	const showLinkBanner = $derived(myTeam !== null && myTeam.team !== null && !myTeam.linked);
@@ -113,7 +115,6 @@
 		if (listItem === null) return;
 		event.preventDefault();
 		event.currentTarget.setPointerCapture(event.pointerId);
-		confirming = false;
 		const rowBox = listItem.getBoundingClientRect();
 		const collectionBox = collectionSection?.getBoundingClientRect();
 		drag = {
@@ -188,7 +189,6 @@
 	function moveByKey(index: number, direction: -1 | 1): void {
 		const to = index + direction;
 		if (to < 0 || to >= ranked.length) return;
-		confirming = false;
 		void saveRanking(moveItem(ranked, index, to));
 	}
 
@@ -238,6 +238,7 @@
 	/** Show the new order right away, then save. Put it back if saving fails. */
 	async function saveRanking(next: string[]): Promise<void> {
 		if (ballot === null) return;
+		savingRankings += 1;
 		const previous = ballot.ranked;
 		ballot = { ...ballot, ranked: next };
 		error = null;
@@ -247,30 +248,33 @@
 			if (await goToClosedIf(e)) return;
 			ballot = { ...ballot, ranked: previous };
 			error = 'Could not save your ranking. Try again.';
+		} finally {
+			savingRankings -= 1;
 		}
 	}
 
 	function addToTop5(teamId: string): void {
 		if (full) return;
-		confirming = false;
 		void saveRanking(insertAtRank(ranked, teamId, ranked.length + 1).ranked);
 	}
 
+	function confirmSubmission(): void {
+		if (ranked.length === 0 || savingRankings > 0 || submitting) return;
+		submissionError = null;
+		confirmationDialog?.showModal();
+	}
+
 	async function submit(): Promise<void> {
-		// First tap asks for confirmation, because a submitted ballot can't be changed.
-		if (!confirming) {
-			confirming = true;
-			return;
-		}
+		if (submitting || savingRankings > 0) return;
 		submitting = true;
-		error = null;
+		submissionError = null;
 		try {
 			await submitBallot();
+			confirmationDialog?.close();
 			await goto('/submitted', { replaceState: true });
 		} catch (e) {
 			if (await goToClosedIf(e)) return;
-			error = 'Could not submit your ballot. Try again.';
-			confirming = false;
+			submissionError = 'Could not submit your ballot. Try again.';
 		} finally {
 			submitting = false;
 		}
@@ -313,6 +317,7 @@
 						<RankRow
 							rank={previewOrder.indexOf(teamId) + 1}
 							team={item.team}
+							note={item.note}
 							href="/team/{teamId}"
 							offset={offsetFor(teamId, i)}
 							lifted={drag?.id === teamId}
@@ -354,6 +359,7 @@
 						<li>
 							<TeamRow
 								team={item.team}
+								note={item.note}
 								href="/team/{item.team.id}"
 								canAdd={!full}
 								onadd={() => {
@@ -374,24 +380,94 @@
 	{/if}
 
 	{#snippet footer()}
-		<Button disabled={ranked.length === 0 || submitting} onclick={() => void submit()}>
-			{#if submitting}
-				Submitting...
-			{:else if confirming}
-				Tap again to submit - this is final
-			{:else}
-				Submit ballot ({ranked.length}/{MAX_RANKED} ranked)
-			{/if}
+		<Button
+			disabled={ranked.length === 0 || savingRankings > 0 || submitting}
+			onclick={confirmSubmission}
+		>
+			Submit ballot ({ranked.length}/{MAX_RANKED} ranked)
 		</Button>
-		<p class="tiny">
-			{confirming
-				? "You won't be able to change your ballot after this."
-				: 'You can re-rank until you submit.'}
-		</p>
+		<p class="tiny">You can re-rank until you submit.</p>
 	{/snippet}
 </Screen>
 
+<dialog
+	bind:this={confirmationDialog}
+	role="alertdialog"
+	aria-labelledby="submit-title"
+	aria-describedby="submit-description"
+	oncancel={(event) => {
+		if (submitting) event.preventDefault();
+	}}
+>
+	<h2 id="submit-title">Submit your ballot?</h2>
+	<p id="submit-description">Check your ranking. You won't be able to change it after submitting.</p>
+	<ol class="review-ranking">
+		{#each ballot?.ranked ?? [] as teamId (teamId)}
+			<li>{byId.get(teamId)?.team.name ?? 'Unavailable team'}</li>
+		{/each}
+	</ol>
+	{#if submissionError !== null}
+		<p class="error" role="alert">{submissionError}</p>
+	{/if}
+	<div class="dialog-actions">
+		<Button
+			variant="secondary"
+			disabled={submitting}
+			onclick={() => confirmationDialog?.close()}
+		>Go back</Button>
+		<Button disabled={submitting} onclick={() => void submit()}>
+			{submitting ? 'Submitting...' : 'Submit ballot'}
+		</Button>
+	</div>
+</dialog>
+
 <style>
+	dialog {
+		position: fixed;
+		inset: 0;
+		width: min(440px, calc(100vw - 32px));
+		max-height: calc(100dvh - 32px);
+		margin: auto;
+		padding: 24px;
+		overflow: auto;
+		background: var(--white);
+		color: var(--ink);
+		border: 1.5px solid var(--ink);
+		box-shadow: 0 16px 48px rgb(0 0 0 / 0.25);
+	}
+	dialog::backdrop {
+		background: rgb(0 0 0 / 0.55);
+	}
+	dialog h2 {
+		margin-bottom: 12px;
+		font-size: 22px;
+		line-height: 1.2;
+	}
+	.review-ranking {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin: 20px 0;
+		padding-left: 24px;
+	}
+	.review-ranking li {
+		overflow-wrap: anywhere;
+	}
+	.dialog-actions {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 12px;
+		margin-top: 20px;
+	}
+	.dialog-actions :global(.button) {
+		padding: 14px 12px;
+		font-size: 14px;
+	}
+	@media (max-width: 360px) {
+		.dialog-actions {
+			grid-template-columns: 1fr;
+		}
+	}
 	.header {
 		display: flex;
 		align-items: center;

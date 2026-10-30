@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Team } from '../types.ts';
 	import Icon from './Icon.svelte';
+	import NoteLink from './NoteLink.svelte';
 
 	// One team in the top 5 (Figma "RankRow"): orange rank badge, name, team
 	// members, and the six-dot grip on the right for dragging.
@@ -12,6 +13,7 @@
 		/** 1 to 5, or 0 while the row is being dragged out of the top 5. */
 		rank: number;
 		team: Team;
+		note: string;
 		href: string;
 		/** How far the row is moved up or down right now, in pixels. */
 		offset?: number;
@@ -27,6 +29,7 @@
 	let {
 		rank,
 		team,
+		note,
 		href,
 		offset = 0,
 		lifted = false,
@@ -48,15 +51,20 @@
 </script>
 
 <div class="row glass" class:lifted style:transform="translateY({offset}px)">
-	<a class="main" {href}>
-		<span class="badge" class:out={rank === 0} aria-label={rank === 0 ? 'Leaving top 5' : `Rank ${rank}`}>
-			{rank === 0 ? '-' : rank}
-		</span>
-		<span class="text">
-			<span class="name">{team.name}</span>
-			<span class="meta">{team.members}</span>
-		</span>
-	</a>
+	<div class="main">
+		<a class="team-link" {href}>
+			<span class="badge" class:out={rank === 0} aria-label={rank === 0 ? 'Leaving top 5' : `Rank ${rank}`}>
+				{rank === 0 ? '-' : rank}
+			</span>
+			<span class="text">
+				<span class="name">{team.name}</span>
+				<span class="meta">{team.members}</span>
+			</span>
+		</a>
+		<div class="note">
+			<NoteLink {href} {note} teamName={team.name} />
+		</div>
+	</div>
 	<button
 		class="grip"
 		type="button"
@@ -93,11 +101,19 @@
 	.main {
 		display: flex;
 		flex: 1;
+		flex-direction: column;
+		min-width: 0;
+	}
+	.team-link {
+		display: flex;
 		align-items: center;
 		gap: 12px;
 		min-width: 0;
 		color: inherit;
 		text-decoration: none;
+	}
+	.note {
+		margin-left: 48px;
 	}
 	.badge {
 		display: grid;

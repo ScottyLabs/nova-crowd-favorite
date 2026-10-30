@@ -1,24 +1,29 @@
 <script lang="ts">
 	import type { Team } from '../types.ts';
+	import NoteLink from './NoteLink.svelte';
 
 	// A collected team that is not in the top 5 (Figma "TeamRow").
 	// Tapping the row opens the team page; the chip adds it to the top 5.
 
 	interface Props {
 		team: Team;
+		note: string;
 		href: string;
 		canAdd: boolean;
 		onadd: () => void;
 	}
 
-	let { team, href, canAdd, onadd }: Props = $props();
+	let { team, note, href, canAdd, onadd }: Props = $props();
 </script>
 
 <div class="row glass">
-	<a class="main" {href}>
-		<span class="name">{team.name}</span>
-		<span class="meta">{team.members}</span>
-	</a>
+	<div class="main">
+		<a class="team-link" {href}>
+			<span class="name">{team.name}</span>
+			<span class="meta">{team.members}</span>
+		</a>
+		<NoteLink {href} {note} teamName={team.name} />
+	</div>
 	<button class="chip" type="button" disabled={!canAdd} onclick={onadd}>
 		{canAdd ? '+ Top 5' : 'Top 5 full'}
 	</button>
@@ -36,6 +41,12 @@
 	.main {
 		display: flex;
 		flex: 1;
+		flex-direction: column;
+		gap: 2px;
+		min-width: 0;
+	}
+	.team-link {
+		display: flex;
 		flex-direction: column;
 		gap: 2px;
 		min-width: 0;

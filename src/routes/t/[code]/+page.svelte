@@ -92,7 +92,7 @@
 			{teamsLabel(result.count)}
 		</p>
 		<div class="spacer"></div>
-		<Button href="/team/{result.team.id}">Add a note</Button>
+		<Button href="/team/{result.team.id}">Rank this team</Button>
 		<Button variant="secondary" href="/collection">View collection</Button>
 		<Button variant="secondary" href="/scan">Scan another team</Button>
 	{:else if result.kind === 'own-team'}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { ApiError, getBallot, getCollectionItem, putBallot, updateNote } from '#lib/voter/api.ts';
@@ -83,6 +83,10 @@
 			notFound = true;
 		} finally {
 			loading = false;
+			if (page.url.hash === '#note' && item !== null) {
+				await tick();
+				document.getElementById('note')?.scrollIntoView({ block: 'center' });
+			}
 		}
 	}
 
@@ -173,30 +177,35 @@
 		<section class="block">
 			<h2 class="label" id="rank-label">Rank in your top 5</h2>
 			<div class="picker" role="group" aria-labelledby="rank-label">
-				<button
-					type="button"
-					class="pick"
-					class:selected={currentRank === null}
-					aria-pressed={currentRank === null}
-					aria-label="Not in my top 5"
-					onclick={() => void pickRank(null)}
-				>
-					-
-				</button>
-				{#each Array.from({ length: MAX_RANKED }, (_, i) => i + 1) as rank (rank)}
+				{#each Array.from({ length: highestAllowed }, (_, i) => i + 1) as rank (rank)}
 					<button
 						type="button"
 						class="pick"
 						class:selected={currentRank === rank}
 						aria-pressed={currentRank === rank}
-						disabled={rank > highestAllowed}
 						onclick={() => void pickRank(rank)}
 					>
 						{rank}
 					</button>
 				{/each}
+				<button
+					type="button"
+					class="pick unranked"
+					class:selected={currentRank === null}
+					aria-pressed={currentRank === null}
+					onclick={() => void pickRank(null)}
+				>
+					Not ranked
+				</button>
 			</div>
-			<p class="tiny">Picking a taken spot inserts this team there and moves the others down.</p>
+			<p class="tiny">
+				{#if highestAllowed < MAX_RANKED}
+					Rank more teams to unlock more positions.
+				{/if}
+				{#if highestAllowed > 1}
+					Picking a taken spot inserts this team there and moves the others down.
+				{/if}
+			</p>
 			{#if bumped}
 				<p class="notice" role="status">Your old #5 moved back to your collection.</p>
 			{/if}
@@ -268,6 +277,7 @@
 	}
 	.picker {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 8px;
 	}
 	.pick {
@@ -282,11 +292,9 @@
 		background: var(--flare);
 		color: var(--white);
 	}
-	.pick:disabled {
-		background: rgb(255 255 255 / 0.35);
-		color: var(--muted);
-		border-color: rgb(43 43 43 / 0.25);
-		cursor: not-allowed;
+	.pick.unranked {
+		width: auto;
+		padding: 0 12px;
 	}
 	.note {
 		width: 100%;
