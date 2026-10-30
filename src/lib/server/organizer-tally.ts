@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { verifySignature } from "./hmac.ts";
-import { tallyIrv } from "./irv.ts";
+import { IrvLimitError, tallyIrv } from "./irv.ts";
 import { json } from "./organizer.ts";
 
 function readElection(db: DatabaseSync) {
@@ -51,7 +51,15 @@ export async function tallyVotes(
       (id): id is string => typeof id === "string" && eligible.has(id),
     ),
   );
-  const result = tallyIrv(rankings);
+  let result;
+  try {
+    result = tallyIrv(rankings);
+  } catch (error) {
+    if (error instanceof IrvLimitError) {
+      return json({ error: error.message }, 422);
+    }
+    throw error;
+  }
   const names = new Map(teams.map((team) => [team.id, team.name]));
   return json({
     generatedAt: new Date().toISOString(),

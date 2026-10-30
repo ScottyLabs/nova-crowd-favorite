@@ -138,3 +138,67 @@ void test("no submitted eligible preferences returns an empty ranking", async ()
     db.close();
   }
 });
+
+void test("zero-vote candidates are not promoted into a shared first place", async () => {
+  const db = database();
+  try {
+    db.exec(`
+      INSERT INTO teams VALUES ('d', 'r4', 'Lower preference', 'Member', NULL, NULL, NULL, 1, '2026-01-01');
+      UPDATE ballots SET rank_3 = 'd' WHERE voter_email = 'submitted@example.com';
+      INSERT INTO voters VALUES ('other@example.com', NULL, '2026-01-01');
+      INSERT INTO ballots (voter_email, rank_1, status, submitted_at)
+        VALUES ('other@example.com', 'c', 'submitted', '2026-01-01');
+    `);
+    const result: unknown = await (await tallyVotes(db, signed(), secret)).json();
+    ok(
+      typeof result === "object" &&
+        result !== null &&
+        "ranking" in result &&
+        "submittedBallots" in result,
+    );
+    deepStrictEqual(result.ranking, [
+      { rank: 1, teamId: "a", name: "Inactive team" },
+      { rank: 1, teamId: "c", name: "Unranked team" },
+      { rank: 3, teamId: "d", name: "Lower preference" },
+    ]);
+    strictEqual(result.submittedBallots, 3);
+  } finally {
+    db.close();
+  }
+});
+
+void test("an election exceeding the exact tie-search limit returns no ranking", async () => {
+  const db = database();
+  try {
+    const team = db.prepare(
+      "INSERT INTO teams (id, response_id, name, members, updated_at) VALUES (?, ?, ?, ?, ?)",
+    );
+    const voter = db.prepare("INSERT INTO voters (email, created_at) VALUES (?, ?)");
+    const ballot = db.prepare(
+      "INSERT INTO ballots (voter_email, rank_1, rank_2, status, submitted_at) VALUES (?, ?, ?, ?, ?)",
+    );
+    for (let i = 0; i < 129; i++) {
+      team.run(`team-${i}`, `response-${i}`, `Team ${i}`, "Member", "2026-01-01");
+      voter.run(`voter-${i}@example.com`, "2026-01-01");
+    }
+    for (let i = 0; i < 129; i++) {
+      ballot.run(
+        `voter-${i}@example.com`,
+        `team-${i}`,
+        `team-${(i + 1) % 129}`,
+        "submitted",
+        "2026-01-01",
+      );
+    }
+    const before = db.prepare("SELECT * FROM ballots ORDER BY voter_email").all();
+    const response = await tallyVotes(db, signed(), secret);
+    strictEqual(response.status, 422);
+    const result: unknown = await response.json();
+    ok(typeof result === "object" && result !== null && "error" in result);
+    strictEqual("ranking" in result, false);
+    ok(typeof result.error === "string" && result.error.includes("No ranking was produced"));
+    deepStrictEqual(db.prepare("SELECT * FROM ballots ORDER BY voter_email").all(), before);
+  } finally {
+    db.close();
+  }
+});

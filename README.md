@@ -221,13 +221,25 @@ teams remain eligible: removal from the Sheet is not disqualification.
 Candidates are eligible teams appearing anywhere in submitted rankings;
 unranked teams do not participate. Drafts and archived reset ballots never count.
 
-If multiple teams share the lowest count, assign all of them the current
-place, remove them from every ballot, and rerun IRV for the remaining teams.
-This organizer-defined rule also applies to zero-vote ties and ties for
-elimination, even when another team has more votes. Shared places use competition
+If multiple teams tie for elimination, consider each possible tied-lowest
+elimination and continue counting in each case. This is
+[IRV with parallel-universe tiebreaking](https://pref-voting.readthedocs.io/en/latest/iterative_methods.html#instant-runoff-put).
+A team shares the current place only if it can actually win that election under
+one of those elimination orders. A tie for the fewest votes is not itself a win.
+Zero-vote teams are eliminated safely, and exhausted ballots are excluded from
+the majority denominator.
+
+After finding the winner or tied winning group, remove that entire group from
+all ballots and run a fresh election for the next place. Teams eliminated during
+that election remain eligible for later places. Shared places use competition
 ranking: two teams sharing first are followed by third (1, 1, 3).
-Counting continues after the tie. No eligible preferences returns an empty
-`ranking`.
+No eligible preferences returns an empty `ranking`.
+
+The tally memoizes repeated candidate sets and safely eliminates groups whose
+combined votes are below every other team's count. If an election still exceeds
+20,000 candidate sets or needs recursive tie handling with more than 128 remaining
+teams, the endpoint returns HTTP 422 without a ranking. It does not choose an
+arbitrary tiebreak or return incomplete results.
 
 The JSON response contains only:
 
@@ -264,8 +276,8 @@ Shared rank 1: Team Aurora, Team Beacon
 ```
 
 The heading says **Provisional results** while voting is open. Shared places
-use 1, 1, 3 numbering. The configured tie rule also assigns shared places to
-teams tied for lowest votes, even when another team has more votes.
+use 1, 1, 3 numbering and contain possible IRV winners for that place, never
+candidates promoted simply because they tied for elimination.
 
 To save the same results as JSON, use:
 

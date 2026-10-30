@@ -1,98 +1,121 @@
-export interface IrvRound {
-  number: number;
-  counts: { teamId: string; votes: number }[];
-  continuingBallots: number;
-  exhaustedBallots: number;
-  eliminatedTeamId: string | null;
-}
+import { IrvLimitError } from "./irv-error.ts";
 
-interface ElectionResult {
-  status: "winner" | "elimination-tie" | "no-votes";
-  winnerId: string | null;
-  tiedTeamIds: string[];
-  rounds: IrvRound[];
-}
+export { IrvLimitError };
 
 export interface IrvResult {
-  status: ElectionResult["status"];
+  status: "winner" | "no-votes";
   winnerId: string | null;
   tiedTeamIds: string[];
   ranking: { rank: number; teamId: string }[];
   unrankedTeamIds: string[];
-  elections: (ElectionResult & { rank: number })[];
 }
 
-function countRound(ballots: string[][], remaining: Set<string>, number: number): IrvRound {
-  const counts = new Map([...remaining].map((teamId) => [teamId, { teamId, votes: 0 }]));
-  let exhaustedBallots = 0;
-  for (const ballot of ballots) {
-    const choice = ballot.map((id) => counts.get(id)).find((count) => count !== undefined);
-    if (choice === undefined) exhaustedBallots += 1;
-    else choice.votes += 1;
+class Elections {
+  readonly bits: bigint[];
+  private readonly preferences: number[][];
+  private readonly cache = new Map<bigint, bigint>();
+  private states = 0;
+
+  constructor(
+    teams: string[],
+    ballots: string[][],
+    private readonly maxStates: number,
+  ) {
+    const indices = new Map(teams.map((id, i) => [id, i]));
+    this.preferences = ballots.map((ballot) => [...new Set(ballot)].map((id) => indices.get(id)!));
+    this.bits = teams.map((_, i) => 1n << BigInt(i));
   }
-  return {
-    number,
-    counts: [...counts.values()],
-    continuingBallots: ballots.length - exhaustedBallots,
-    exhaustedBallots,
-    eliminatedTeamId: null,
-  };
-}
 
-function electWinner(ballots: string[][]): ElectionResult {
-  const remaining = new Set(ballots.flat().toSorted());
-  const rounds: IrvRound[] = [];
-  while (remaining.size > 0) {
-    const round = countRound(ballots, remaining, rounds.length + 1);
-    rounds.push(round);
-    const winner = round.counts.find((count) => count.votes * 2 > round.continuingBallots);
-    if (winner !== undefined) {
-      return { status: "winner", winnerId: winner.teamId, tiedTeamIds: [], rounds };
-    }
-    const minimum = Math.min(...round.counts.map((count) => count.votes));
-    const lowest = round.counts.filter((count) => count.votes === minimum);
-    if (lowest.length > 1) {
-      return {
-        status: "elimination-tie",
-        winnerId: null,
-        tiedTeamIds: lowest.map((count) => count.teamId),
-        rounds,
-      };
-    }
-    round.eliminatedTeamId = lowest[0].teamId;
-    remaining.delete(lowest[0].teamId);
+  members(mask: bigint): number[] {
+    return this.bits.flatMap((bit, i) => ((mask & bit) === 0n ? [] : [i]));
   }
-  return { status: "no-votes", winnerId: null, tiedTeamIds: [], rounds };
+
+  private count(mask: bigint) {
+    const counts = this.bits.map(() => 0);
+    let continuing = 0;
+    let transfers = false;
+    for (const ballot of this.preferences) {
+      let chosen = false;
+      for (const i of ballot) {
+        if ((mask & this.bits[i]) === 0n) continue;
+        if (chosen) {
+          transfers = true;
+          break;
+        }
+        counts[i] += 1;
+        continuing += 1;
+        chosen = true;
+      }
+    }
+    return { counts, continuing, transfers };
+  }
+
+  private eliminate(mask: bigint, active: number[], counts: number[]): bigint {
+    // Bound recursive depth as well as the total number of explored states.
+    if (active.length > 128) throw new IrvLimitError();
+    const minimum = Math.min(...active.map((i) => counts[i]));
+    const lowest = active.filter((i) => counts[i] === minimum);
+    const others = active.filter((i) => counts[i] !== minimum);
+    const next = Math.min(...others.map((i) => counts[i]));
+    if (others.length > 0 && minimum * lowest.length < next) {
+      // Safe batch elimination, including zero-vote candidates. Even every
+      // transfer staying within this group cannot let it catch the next team.
+      const eliminated = lowest.reduce((group, i) => group | this.bits[i], 0n);
+      return this.winners(mask & ~eliminated);
+    }
+    let result = 0n;
+    for (const i of lowest) {
+      result |= this.winners(mask & ~this.bits[i]);
+      if (result === mask) break;
+    }
+    return result;
+  }
+
+  winners(mask: bigint): bigint {
+    const cached = this.cache.get(mask);
+    if (cached !== undefined) return cached;
+    this.states += 1;
+    if (this.states > this.maxStates) throw new IrvLimitError();
+    const active = this.members(mask);
+    const { counts, continuing, transfers } = this.count(mask);
+    const majority = active.find((i) => counts[i] * 2 > continuing);
+    let result = 0n;
+    if (majority !== undefined) {
+      result = this.bits[majority];
+    } else if (transfers) {
+      result = this.eliminate(mask, active, counts);
+    } else {
+      // With no remaining transfers, only the highest-count candidates can win.
+      const maximum = Math.max(...active.map((i) => counts[i]));
+      for (const i of active) if (counts[i] === maximum) result |= this.bits[i];
+    }
+    this.cache.set(mask, result);
+    return result;
+  }
 }
 
-/** Select each place by rerunning IRV with previously selected teams removed. */
-export function tallyIrv(ballots: string[][]): IrvResult {
-  const remaining = new Set(ballots.flat().toSorted());
+/**
+ * Select each place with a fresh IRV election. For elimination ties, consider
+ * every tied-lowest candidate's elimination (parallel-universe tiebreaking).
+ * Report all possible winners as tied, remove that group, and rerun IRV.
+ */
+export function tallyIrv(ballots: string[][], maxStates = 20_000): IrvResult {
+  const teams = [...new Set(ballots.flat())].toSorted();
+  const elections = new Elections(teams, ballots, maxStates);
+  let remaining = (1n << BigInt(teams.length)) - 1n;
   const ranking: IrvResult["ranking"] = [];
-  const elections: IrvResult["elections"] = [];
-  let preferences = ballots;
-  let status: IrvResult["status"] = "no-votes";
-  while (remaining.size > 0) {
-    const election = electWinner(preferences);
+  while (remaining !== 0n) {
+    const selected = elections.winners(remaining);
     const rank = ranking.length + 1;
-    elections.push({ rank, ...election });
-    status = election.status;
-    const selected = election.winnerId === null ? election.tiedTeamIds : [election.winnerId];
-    if (selected.length === 0) break;
-    for (const teamId of selected) {
-      ranking.push({ rank, teamId });
-      remaining.delete(teamId);
-    }
-    preferences = preferences.map((ballot) => ballot.filter((id) => !selected.includes(id)));
-    status = "winner";
+    for (const i of elections.members(selected)) ranking.push({ rank, teamId: teams[i] });
+    remaining &= ~selected;
   }
-  const firstPlace = ranking.filter((entry) => entry.rank === 1).map((entry) => entry.teamId);
+  const first = ranking.filter((entry) => entry.rank === 1).map((entry) => entry.teamId);
   return {
-    status,
-    winnerId: firstPlace.length === 1 ? firstPlace[0] : null,
-    tiedTeamIds: firstPlace.length > 1 ? firstPlace : [],
+    status: first.length === 0 ? "no-votes" : "winner",
+    winnerId: first.length === 1 ? first[0] : null,
+    tiedTeamIds: first.length > 1 ? first : [],
     ranking,
-    unrankedTeamIds: [...remaining],
-    elections,
+    unrankedTeamIds: [],
   };
 }
