@@ -38,7 +38,7 @@
 		voters: 'Add voters', voter: 'Voter details', reissue: 'Replace voter link?', reset: 'Reset ballot?',
 		team: 'Edit team', disqualify: 'Disqualify team?', reinstate: 'Reinstate team?',
 		stickers: 'Create QR codes', register: 'Register printed codes', unlink: 'Release QR code?',
-		deadline: 'Set closing time', close: 'Close voting?', open: 'Reopen voting?', restore: 'Restore database?'
+		deadline: 'Set closing time', 'clear-deadline': 'Clear closing time?', close: 'Close voting?', open: 'Reopen voting?', restore: 'Restore database?'
 	};
 
 	function open(kind: string, id = '') {
@@ -158,7 +158,7 @@
 					</ol>
 				{:else}<p class="empty">Calculate results when you are ready to review the ranking.</p>{/if}
 			{:else if tab === 'Settings'}
-				<div class="setting"><div><h3>Voting closes</h3><p>{data.deadline ? new Date(data.deadline).toLocaleString() : 'No closing time set'}</p></div><button class="quiet" onclick={() => open('deadline')}>Change time</button></div>
+				<div class="setting"><div><h3>Voting closes</h3><p>{data.deadline ? new Date(data.deadline).toLocaleString() : 'No closing time set'}</p></div><div class="actions"><button class="quiet" onclick={() => open('deadline')}>Change time</button>{#if data.deadline}<button class="text-button" onclick={() => open('clear-deadline')}>Clear closing time</button>{/if}</div></div>
 				<div class="setting"><div><h3>Voting is {closed ? 'closed' : 'open'}</h3><p>{closed ? 'Voters cannot submit ballots.' : 'Voters can collect, rank, and submit.'}</p></div><button class="quiet" onclick={() => open(closed ? 'open' : 'close')}>{closed ? 'Reopen voting' : 'Close voting now'}</button></div>
 				<div class="setting"><div><h3>Database backup</h3><p>Save a private copy of all event data.</p></div><a class="button quiet" href="/organizer/download/database">Download backup</a></div>
 				<div class="setting"><div><h3>Restore database</h3><p>Replace event data with a saved backup.</p></div><button class="text-button danger" onclick={() => open('restore')}>Restore from backup</button></div>
@@ -198,6 +198,7 @@
 			{:else if editor === 'register'}<form method="POST" action="?/run" use:enhance={submit}><input type="hidden" name="operation" value="register" /><label>Codes<textarea name="codes" rows="5" required placeholder="One code per line"></textarea></label><button class="primary" disabled={busy}>Register codes</button></form>
 			{:else if editor === 'unlink'}<p>Release the QR code claimed by <strong>{sticker?.team}</strong>? Another team will be able to claim it.</p>{@render action('unlink', { code: selected }, 'Release QR code', 'danger')}
 			{:else if editor === 'deadline'}<form method="POST" action="?/run" use:enhance={submit}><input type="hidden" name="operation" value="voting" /><label>Closing time (your local time)<input type="datetime-local" bind:value={deadline} required /></label><input type="hidden" name="closesAt" value={deadline ? new Date(deadline).toISOString() : ''} /><button class="primary" disabled={busy}>Save closing time</button></form>
+			{:else if editor === 'clear-deadline'}<p>{closed ? 'This will reopen voting with no closing time.' : 'Voting will stay open until you close it manually.'}</p>{@render action('voting', { closesAt: '' }, 'Clear closing time', 'primary')}
 			{:else if editor === 'close'}<p>Voters will no longer be able to submit ballots.</p>{@render action('voting', { closesAt: new Date().toISOString() }, 'Close voting', 'danger')}
 			{:else if editor === 'open'}<p>Allow voters to submit again, with no closing time set. Submitted ballots stay locked.</p>{@render action('voting', { closesAt: '' }, 'Reopen voting', 'primary')}
 			{:else if editor === 'restore'}<p>This replaces all event data. The current database is saved on the server first.</p>

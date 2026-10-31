@@ -21,7 +21,7 @@ Rotation signs everyone out. A missing password keeps the dashboard locked.
 - **Teams:** search names and members. **Edit** changes the name or eligibility.
 - **QR codes:** create codes, print one per page, or release a team's claim.
 - **Results:** calculate ranks from submitted ballots. Shared ranks are ties.
-- **Settings:** set the closing time, close or reopen voting, and back up or
+- **Settings:** set or clear the closing time, close or reopen voting, and back up or
   restore the database.
 
 Before the event, check teams, add voters, print QR codes, and set the closing
