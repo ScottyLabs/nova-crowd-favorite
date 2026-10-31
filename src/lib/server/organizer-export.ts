@@ -51,7 +51,7 @@ function ballotCsv(db: DatabaseSync): string {
   );
 }
 
-function databaseSnapshot(db: DatabaseSync): Uint8Array<ArrayBuffer> {
+export function databaseSnapshot(db: DatabaseSync): Uint8Array<ArrayBuffer> {
   const directory = mkdtempSync(join(tmpdir(), "nova-export-"));
   try {
     const path = join(directory, "nova.db");

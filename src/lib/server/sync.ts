@@ -6,7 +6,7 @@ const upsertTeam = db.prepare(`
   INSERT INTO teams (id, response_id, name, members, repo_url, slides_url, video_url, active, updated_at)
   VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
   ON CONFLICT(response_id) DO UPDATE SET
-    name = excluded.name,
+    name = COALESCE((SELECT value FROM settings WHERE key = 'team_name:' || teams.id), excluded.name),
     members = excluded.members,
     repo_url = excluded.repo_url,
     slides_url = excluded.slides_url,

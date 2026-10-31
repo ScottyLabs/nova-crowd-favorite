@@ -7,6 +7,7 @@
     "npm:@sveltejs/vite-plugin-svelte@^7.2.0": "7.3.1_svelte@5.57.2_vite@8.3.4_@types+node@24.19.2",
     "npm:@types/node@24": "24.19.2",
     "npm:jsqr@1.4.0": "1.4.0",
+    "npm:qrcode-generator@2.0.4": "2.0.4",
     "npm:svelte-check@*": "4.7.6_svelte@5.57.2_typescript@6.0.3",
     "npm:svelte-check@^4.6.0": "4.7.6_svelte@5.57.2_typescript@6.0.3",
     "npm:svelte@^5.57.1": "5.57.2",
@@ -364,6 +365,9 @@
         "source-map-js"
       ]
     },
+    "qrcode-generator@2.0.4": {
+      "integrity": "sha512-mZSiP6RnbHl4xL2Ap5HfkjLnmxfKcPWpWe/c+5XxCuetEenqmNFf1FH/ftXPCtFG5/TDobjsjz6sSNL0Sr8Z9g=="
+    },
     "readdirp@4.1.2": {
       "integrity": "sha512-GDhwkLfywWL2s6vEjyhri+eXmfH6j1L7JE27WhqLeYzoh/A3DBaYGEj2H/HFZCn/kMfim73FXxEJTw06WtxQwg=="
     },
@@ -499,6 +503,7 @@
         "npm:@sveltejs/vite-plugin-svelte@^7.2.0",
         "npm:@types/node@24",
         "npm:jsqr@1.4.0",
+        "npm:qrcode-generator@2.0.4",
         "npm:svelte-check@^4.6.0",
         "npm:svelte@^5.57.1",
         "npm:typescript@^6.0.3",

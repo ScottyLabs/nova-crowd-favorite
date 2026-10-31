@@ -1,68 +1,56 @@
 # Local bug testing
 
-## Start the app
+## Start
 
 From this repository:
 
-```bash
+```sh
 deno install
 bash scripts/bug-test.sh
 ```
 
-The script uses a new database under `/tmp`. It does not change the project's
-`nova.db`. Keep this terminal open. Stop the app with Ctrl+C.
+The app uses a new database under `/tmp` and leaves the project's `nova.db`
+alone. Keep the terminal open; stop with Ctrl+C.
 
-Open <http://127.0.0.1:5174/api/dev/seed> once to add demo teams and a demo voter.
-Opening it again resets the demo voter's ballot, collection, and sticker claims,
-and reopens voting.
+Open <http://127.0.0.1:5174/api/dev/seed> once to add demo teams and a voter.
+Opening it again resets that voter's ballot, collection, and sticker claims,
+and reopens voting. The demo voter starts with five collected teams; newly
+added voters start empty.
 
-## Add voters and share links
+## Organizer access
 
-Open a second terminal in this repository. Run the `source /tmp/.../organizer-env.sh`
-command printed by the script, then add your testers:
+In a second terminal, run the `source /tmp/.../organizer-env.sh` command printed
+by the script. Show the local password:
 
-```bash
-deno task organizer voters alice@example.com bob@example.com
+```sh
+printf '%s\n' "$ORGANIZER_PASSWORD"
 ```
 
-The command prints a personal voting link for each email. Send each person their
-own link; the app does not send emails. Testers should open their link in the
-browser they will use for testing. Use separate browser profiles when testing
-multiple voters on one computer.
+Open <http://127.0.0.1:5174/organizer> and sign in. This password belongs to this
+session; `deno task password` fetches a different password from OpenBao.
 
-To replace a lost link:
+## Run the session
 
-```bash
-deno task organizer reissue alice@example.com
-```
+1. In **Voters**, choose **Add voters**, enter tester emails, and copy the links.
+   Send each tester their own link. The app does not send emails.
+1. Testers open their link, collect teams, add notes, rank them, and submit.
+   Use separate browser profiles for multiple voters on one computer.
+1. In **Voters > Manage**, replace lost links or reset ballots. Submitted ballots
+   stay locked until reset.
+1. In **Results**, calculate ranks. Use **Settings** for voting controls and backups.
 
-Send the new link to the voter. The old one stops working.
+For collecting demo teams, open these after a voter link:
 
-## Collect teams and vote
+- <http://127.0.0.1:5174/t/qr-dev-t2>
+- <http://127.0.0.1:5174/t/qr-dev-t3>
+- <http://127.0.0.1:5174/t/qr-dev-t4>
+- <http://127.0.0.1:5174/t/qr-dev-t5>
+- <http://127.0.0.1:5174/t/qr-dev-t6>
 
-Open these sticker links after opening a voting link:
+To test claiming a sticker, use the demo voter's **Scan my team** action with
+an unclaimed code from **QR codes**. Other voters need a matching team member
+email in the Sheet to claim one.
 
-- `http://127.0.0.1:5174/t/qr-dev-t2`
-- `http://127.0.0.1:5174/t/qr-dev-t3`
-- `http://127.0.0.1:5174/t/qr-dev-t4`
-- `http://127.0.0.1:5174/t/qr-dev-t5`
-- `http://127.0.0.1:5174/t/qr-dev-t6`
-
-Ask testers to collect teams, add notes, rank their favorites, and submit.
-Submitted ballots lock. To let someone vote again:
-
-```bash
-deno task organizer reset-ballot alice@example.com
-```
-
-To inspect ballots and results:
-
-```bash
-deno task organizer list-ballots
-deno task organizer tally
-```
-
-Have testers report what they did, what went wrong, and their browser/device.
-
-These links work on the computer running the app. Phone testing needs HTTPS
-access to that computer and links using its HTTPS address.
+Ask testers to report their steps, what went wrong, and their browser/device.
+These URLs work on the host computer. Phones need HTTPS access to that computer
+and links using its HTTPS address.
