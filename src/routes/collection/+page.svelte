@@ -274,7 +274,7 @@
 			await goto('/submitted', { replaceState: true });
 		} catch (e) {
 			if (await goToClosedIf(e)) return;
-			submissionError = 'Could not submit your ballot. Try again.';
+			submissionError = e instanceof ApiError && e.code === 'network' ? 'Connect to the internet to submit.' : 'Could not submit your ballot. Try again.';
 		} finally {
 			submitting = false;
 		}

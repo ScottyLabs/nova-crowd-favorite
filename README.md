@@ -39,6 +39,17 @@ links. Names edited in the dashboard survive Sheet sync.
 For a local session with a disposable database, see [BUG_TESTING.md](BUG_TESTING.md).
 That script generates its own password instead of using OpenBao.
 
+## Offline use
+
+After opening the app online, voters can edit notes and draft rankings offline.
+Changes stay in this browser and sync when the connection returns. The save
+status shows whether they are stored locally or confirmed by the server.
+Submission, scanning, and claiming QR codes require a connection.
+
+Offline refresh works for cached pages in a production build. Keep the tab open
+if visiting a team for the first time offline. Clearing browser data removes
+unsynced changes. The organizer dashboard is not cached.
+
 ## Database recovery
 
 In **Settings**, download a backup or restore one from the same app version.

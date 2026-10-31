@@ -29,6 +29,7 @@ export function getVoterCode(): string | null {
 export function saveVoterCode(code: string): boolean {
   try {
     localStorage.setItem(STORAGE_KEY, code);
+    window.dispatchEvent(new Event("nova-voter-change"));
     return true;
   } catch {
     return false;
@@ -38,13 +39,8 @@ export function saveVoterCode(code: string): boolean {
 export function clearVoterCode(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
+    window.dispatchEvent(new Event("nova-voter-change"));
   } catch {
     // nothing saved to clear
   }
-}
-
-/** Headers to send with every API request. Empty if there is no code. */
-export function authHeaders(): Record<string, string> {
-  const code = getVoterCode();
-  return code === null ? {} : { Authorization: `Bearer ${code}` };
 }

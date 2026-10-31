@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import Background, { type BackgroundGroup } from './Background.svelte';
 	import TopBar from './TopBar.svelte';
+	import SaveStatus from './SaveStatus.svelte';
 
 	// Page frame every voter screen uses: group background, top bar, body,
 	// and an optional footer that sticks to the bottom (like the Submit bar).
@@ -24,9 +25,11 @@
 	<TopBar {step} />
 	<main class="body">
 		{@render children()}
+		{#if !footer}<SaveStatus />{/if}
 	</main>
 	{#if footer}
 		<div class="footer" class:hidden={footerHidden}>
+			<SaveStatus />
 			{@render footer()}
 		</div>
 	{/if}

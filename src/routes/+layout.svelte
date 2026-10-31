@@ -2,8 +2,15 @@
 	import favicon from '#lib/assets/favicon.svg';
 	import '#lib/voter/theme.css';
 	import type { LayoutProps } from './$types';
+	import { onMount } from 'svelte';
+	import { afterNavigate } from '$app/navigation';
+	import { startSync } from '#lib/voter/api.ts';
 
 	let { children }: LayoutProps = $props();
+	onMount(startSync);
+	afterNavigate(({ to }) => {
+		navigator.serviceWorker?.controller?.postMessage(to?.url.pathname);
+	});
 </script>
 
 <svelte:head>

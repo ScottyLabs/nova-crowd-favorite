@@ -14,8 +14,6 @@
 	// Team detail + notes (Figma screen 4).
 
 	const NOTE_LIMIT = 500;
-	// Save the note this long after the voter stops typing.
-	const SAVE_DELAY_MS = 1000;
 
 	const teamId = $derived(page.params.id ?? '');
 
@@ -27,9 +25,8 @@
 	let bumped = $state(false);
 
 	let note = $state('');
-	let lastSaved = '';
-	let noteStatus = $state<'idle' | 'saving' | 'saved' | 'error'>('idle');
-	let saveTimer: ReturnType<typeof setTimeout> | undefined;
+	let lastQueued = '';
+	let noteError = $state(false);
 
 	const ranked = $derived(ballot?.ranked ?? []);
 	const currentRank = $derived(rankOf(ranked, teamId));
@@ -39,22 +36,12 @@
 	);
 
 	onMount(() => {
-		document.addEventListener('visibilitychange', onHide);
 		if (getVoterCode() === null) {
 			void goto('/', { replaceState: true });
 		} else {
 			void load();
 		}
-		return () => {
-			document.removeEventListener('visibilitychange', onHide);
-			clearTimeout(saveTimer);
-		};
 	});
-
-	/** Save right away if the voter switches apps or locks the phone. */
-	function onHide(): void {
-		if (document.visibilityState === 'hidden') void saveNote();
-	}
 
 	async function load(): Promise<void> {
 		try {
@@ -73,7 +60,7 @@
 			item = loadedItem;
 			ballot = loadedBallot;
 			note = loadedItem.note;
-			lastSaved = loadedItem.note;
+			lastQueued = loadedItem.note;
 		} catch (e) {
 			if (e instanceof ApiError && e.code === 'unauthorized') {
 				clearVoterCode();
@@ -118,31 +105,23 @@
 
 	// ---- Notes autosave ----
 
-	function onNoteInput(): void {
-		noteStatus = 'idle';
-		clearTimeout(saveTimer);
-		saveTimer = setTimeout(() => void saveNote(), SAVE_DELAY_MS);
-	}
-
-	async function saveNote(): Promise<void> {
-		clearTimeout(saveTimer);
-		if (item === null || note === lastSaved) return;
+	async function saveNote(): Promise<boolean> {
+		if (item === null || note === lastQueued) return true;
 		const sending = note;
-		noteStatus = 'saving';
 		try {
 			await updateNote(teamId, sending);
-			lastSaved = sending;
-			// If they kept typing while this saved, the next save is already queued.
-			noteStatus = note === sending ? 'saved' : 'idle';
+			lastQueued = sending;
+			noteError = false;
+			return true;
 		} catch {
-			noteStatus = 'error';
+			noteError = true;
+			return false;
 		}
 	}
 
-	/** Save the note first, then go back to the collection. */
+	/** Changes are kept locally before navigation; syncing continues in the background. */
 	async function leave(): Promise<void> {
-		await saveNote();
-		await goto('/collection');
+		if (await saveNote()) await goto('/collection');
 	}
 </script>
 
@@ -223,19 +202,11 @@
 				maxlength={NOTE_LIMIT}
 				placeholder="What stood out? What do you want to remember?"
 				bind:value={note}
-				oninput={onNoteInput}
-				onblur={() => void saveNote()}
+				oninput={(event) => { note = event.currentTarget.value; void saveNote(); }}
 			></textarea>
 			<div class="note-footer">
-				<p class="status" class:error-text={noteStatus === 'error'} role="status">
-					{#if noteStatus === 'saving'}
-						Saving...
-					{:else if noteStatus === 'saved'}
-						<Icon name="check" size={14} /> Saved
-					{:else if noteStatus === 'error'}
-						<Icon name="alert" size={14} /> Couldn't save.
-						<button type="button" class="retry" onclick={() => void saveNote()}>Retry</button>
-					{/if}
+				<p class="status error-text" role="status">
+					{#if noteError}Couldn't keep this note. <button type="button" class="retry" onclick={() => void saveNote()}>Retry</button>{/if}
 				</p>
 				<p class="tiny">{note.length}/{NOTE_LIMIT}</p>
 			</div>

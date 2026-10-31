@@ -2,67 +2,20 @@
 // so this is the only file that knows the URLs and response shapes.
 // Each request sends the voter code as `Authorization: Bearer <code>`.
 
-import { authHeaders } from "./identity.ts";
+import { getVoterCode } from "./identity.ts";
+import { pendingChanges, readLocal, writeLocal } from "./cache.ts";
+import {
+  ApiError,
+  currentCode,
+  enqueue,
+  failure,
+  readCached as read,
+  send,
+  syncPending,
+  pendingError,
+} from "./sync.ts";
+export { ApiError, startSync, syncPending, syncState } from "./sync.ts";
 import type { Ballot, ClaimResult, CollectionItem, MyTeam, ScanResult, Team } from "./types.ts";
-
-export type ApiErrorCode =
-  | "unauthorized"
-  | "not-found"
-  | "already-submitted"
-  | "voting-closed"
-  | "invalid"
-  | "network";
-
-/** Thrown for errors the screens need to react to. */
-export class ApiError extends Error {
-  code: ApiErrorCode;
-
-  constructor(code: ApiErrorCode, message: string) {
-    super(message);
-    this.code = code;
-  }
-}
-
-interface ApiResponse {
-  status: number;
-  data: unknown;
-}
-
-/** Send a request. Only throws when the server can't be reached. */
-async function send(method: string, path: string, body?: unknown): Promise<ApiResponse> {
-  const headers: Record<string, string> = { ...authHeaders() };
-  if (body !== undefined) headers["content-type"] = "application/json";
-  let response: Response;
-  try {
-    response = await fetch(path, {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-  } catch {
-    throw new ApiError("network", "Could not reach the server. Check your connection.");
-  }
-  let data: unknown = null;
-  try {
-    data = await response.json();
-  } catch {
-    // empty or non-JSON body
-  }
-  return { status: response.status, data };
-}
-
-/** Turn a failed response into the right ApiError. */
-function failure(status: number, data: unknown): ApiError {
-  const message =
-    isRecord(data) && typeof data.error === "string" ? data.error : "Something went wrong.";
-  if (status === 401) return new ApiError("unauthorized", "This voting link does not work.");
-  if (status === 403 && isRecord(data) && data.kind === "voting-closed") {
-    return new ApiError("voting-closed", "Voting has closed.");
-  }
-  if (status === 404) return new ApiError("not-found", message);
-  if (status === 409) return new ApiError("already-submitted", message);
-  return new ApiError("invalid", message);
-}
 
 // ---- Checking response shapes (no `as`, so bad data fails loudly) ----------
 
@@ -114,14 +67,26 @@ function toCount(value: unknown): number {
 
 // ---- Endpoints ----------------------------------------------------------
 
-/** GET /api/collection */
-export async function getCollection(): Promise<CollectionItem[]> {
-  const { status, data } = await send("GET", "/api/collection");
-  if (status !== 200) throw failure(status, data);
-  if (!Array.isArray(data)) throw new ApiError("invalid", "Unexpected collection from the server.");
-  return data.flatMap((entry: unknown) => {
+function toCollection(value: unknown): CollectionItem[] {
+  if (!Array.isArray(value))
+    throw new ApiError("invalid", "Unexpected collection from the server.");
+  return value.flatMap((entry: unknown) => {
     const item = toItem(entry);
     return item === null ? [] : [item];
+  });
+}
+
+/** GET /api/collection, with pending local notes. */
+export async function getCollection(): Promise<CollectionItem[]> {
+  const code = currentCode();
+  const items = await read("/api/collection", toCollection);
+  if (code !== getVoterCode())
+    throw new ApiError("invalid", "Voting link changed. Refresh to continue.");
+  return items.map((item) => {
+    const change = pendingChanges(code).find((entry) => entry.path === notePath(item.team.id));
+    return change !== undefined && "note" in change.body
+      ? { team: item.team, note: change.body.note }
+      : item;
   });
 }
 
@@ -149,41 +114,73 @@ export async function addByQr(code: string): Promise<ScanResult> {
     : { kind: "added", team, count };
 }
 
-/** PATCH /api/collection/{teamId}  (body: { note }) */
-export async function updateNote(teamId: string, note: string): Promise<void> {
-  const { status, data } = await send("PATCH", `/api/collection/${encodeURIComponent(teamId)}`, {
-    note,
-  });
-  if (status !== 200) throw failure(status, data);
+const notePath = (id: string) => `/api/collection/${encodeURIComponent(id)}`;
+
+/** Keep edits on this device immediately; network saves run in the background. */
+export function updateNote(teamId: string, note: string): Promise<void> {
+  const code = currentCode();
+  enqueue(code, { path: notePath(teamId), method: "PATCH", body: { note } });
+  return Promise.resolve();
 }
 
-/** GET /api/ballot */
 export async function getBallot(): Promise<Ballot> {
-  const { status, data } = await send("GET", "/api/ballot");
-  if (status !== 200) throw failure(status, data);
-  return toBallot(data);
+  const code = currentCode();
+  const ballot = await read("/api/ballot", toBallot);
+  if (code !== getVoterCode())
+    throw new ApiError("invalid", "Voting link changed. Refresh to continue.");
+  const change = pendingChanges(code).find((entry) => entry.path === "/api/ballot");
+  return ballot.status === "draft" &&
+    !ballot.votingClosed &&
+    change !== undefined &&
+    "ranked" in change.body
+    ? { ...ballot, ranked: change.body.ranked }
+    : ballot;
 }
 
-/** PUT /api/ballot  (body: { ranked: teamId[] }) */
-export async function putBallot(ranked: string[]): Promise<Ballot> {
-  const { status, data } = await send("PUT", "/api/ballot", { ranked });
-  if (status !== 200) throw failure(status, data);
-  return toBallot(data);
+export function putBallot(ranked: string[]): Promise<Ballot> {
+  const code = currentCode();
+  const value = readLocal(code, "/api/ballot");
+  const ballot =
+    value === undefined
+      ? { ranked: [], status: "draft" as const, submittedAt: null, votingClosed: false }
+      : toBallot(value);
+  if (ballot.votingClosed) throw new ApiError("voting-closed", "Voting has closed.");
+  if (ballot.status === "submitted")
+    throw new ApiError("already-submitted", "Your ballot is already submitted.");
+  const next = { ...ballot, ranked };
+  enqueue(code, { path: "/api/ballot", method: "PUT", body: { ranked } });
+  return Promise.resolve(next);
 }
 
-/** POST /api/ballot/submit */
+/** Never queue final submission or report success without server confirmation. */
 export async function submitBallot(): Promise<Ballot> {
-  const { status, data } = await send("POST", "/api/ballot/submit");
+  const code = currentCode();
+  await syncPending();
+  if (code !== getVoterCode())
+    throw new ApiError("invalid", "Voting link changed. Refresh to continue.");
+  const pending = pendingChanges(code).find((entry) => entry.path === "/api/ballot");
+  if (pending !== undefined) throw pendingError(pending.version);
+  const { status, data } = await send("POST", "/api/ballot/submit", undefined, code);
   if (status !== 200) throw failure(status, data);
-  return toBallot(data);
+  const ballot = toBallot(data);
+  try {
+    writeLocal(code, "/api/ballot", ballot);
+  } catch {
+    // A confirmed submission succeeds even if the browser cannot cache its receipt.
+  }
+  if (code !== getVoterCode())
+    throw new ApiError("invalid", "Voting link changed. Refresh to continue.");
+  return ballot;
 }
 
 /** GET /api/my-team */
-export async function getMyTeam(): Promise<MyTeam> {
-  const { status, data } = await send("GET", "/api/my-team");
-  if (status !== 200) throw failure(status, data);
-  if (!isRecord(data)) throw new ApiError("invalid", "Unexpected team from the server.");
-  return { team: toTeam(data.team), linked: data.linked === true };
+function toMyTeam(value: unknown): MyTeam {
+  if (!isRecord(value)) throw new ApiError("invalid", "Unexpected team from the server.");
+  return { team: toTeam(value.team), linked: value.linked === true };
+}
+
+export function getMyTeam(): Promise<MyTeam> {
+  return read("/api/my-team", toMyTeam);
 }
 
 const CLAIM_KINDS = ["can-link", "claimed", "already-yours", "team-has-code", "taken"] as const;
