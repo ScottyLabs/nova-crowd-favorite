@@ -16,6 +16,7 @@ const upsertTeam = db.prepare(`
   RETURNING id
 `);
 const clearMembers = db.prepare("DELETE FROM team_members WHERE team_id = ?");
+const addHacker = db.prepare("INSERT OR IGNORE INTO hackers (email) VALUES (?)");
 const addMember = db.prepare("INSERT OR IGNORE INTO team_members (team_id, email) VALUES (?, ?)");
 
 // Save one team, then replace its member list so it exactly matches the Sheet
@@ -34,7 +35,10 @@ function saveTeam(t: ParsedTeam, now: string): void {
   if (typeof id !== "string") throw new Error("Team upsert did not return an id");
 
   clearMembers.run(id);
-  for (const email of t.emails) addMember.run(id, email);
+  for (const email of t.emails) {
+    addHacker.run(email);
+    addMember.run(id, email);
+  }
 }
 
 // Run fn in one transaction: commit if it succeeds, roll back if it throws

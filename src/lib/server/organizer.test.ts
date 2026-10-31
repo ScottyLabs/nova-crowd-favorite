@@ -104,6 +104,7 @@ void test("existing voters reject the whole batch and preserve credentials and b
   const db = database();
   try {
     const code = "old-voter-code";
+    db.exec("INSERT INTO hackers (email) VALUES ('person@example.com')");
     db.prepare("INSERT INTO voters (email, token_hash, created_at) VALUES (?, ?, ?)").run(
       "person@example.com",
       await hashCode(code),
@@ -149,6 +150,7 @@ void test("QR registration can be retried without clearing team claims", async (
   try {
     db.exec(`
       INSERT INTO teams (id, response_id, name, members, updated_at) VALUES ('t1', 'r1', 'Team', '', '2026-01-01');
+      INSERT INTO hackers (email) VALUES ('member@example.com');
       INSERT INTO voters (email, created_at) VALUES ('member@example.com', '2026-01-01');
       INSERT INTO qr_codes VALUES ('existing-code', 't1', 'member@example.com', '2026-01-01');
     `);
@@ -196,6 +198,7 @@ void test("deadline changes require a timezone and reopening preserves submitted
   const db = database();
   try {
     db.exec(`
+      INSERT INTO hackers (email) VALUES ('test@example.com');
       INSERT INTO voters (email, created_at) VALUES ('test@example.com', '2026-01-01');
       INSERT INTO ballots (voter_email, status, submitted_at) VALUES ('test@example.com', 'submitted', '2026-01-01');
     `);

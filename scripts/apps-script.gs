@@ -1,19 +1,25 @@
-// Apps Script for the Nova submission Sheet: pushes all rows to /api/sync every 2 minutes.
+// Sync team submissions and, optionally, a hackers tab from this spreadsheet.
 //
 // Setup (in the Sheet: Extensions > Apps Script):
 // 1. Paste this file in.
 // 2. Project Settings > Script Properties > add:
 //      SYNC_URL         = https://<app-url>/api/sync
 //      SYNC_HMAC_SECRET = <same value as in OpenBao>
-//      SHEET_NAME       = <the tab name at the bottom of the Sheet>
-// 3. Triggers > Add trigger > pushToApp, time-driven, every 2 minutes.
+//      SHEET_NAME       = <team submissions tab>
+//      HACKERS_SHEET_NAME = <optional hackers tab with Name and Email columns>
+// 3. Run pushToApp, then add a recurring time-driven trigger.
 
 function pushToApp() {
   const props = PropertiesService.getScriptProperties();
   const url = props.getProperty("SYNC_URL");
   const secret = props.getProperty("SYNC_HMAC_SECRET");
   const sheetName = props.getProperty("SHEET_NAME");
+  pushSheet(sheetName, url, secret);
+  const hackersSheet = props.getProperty("HACKERS_SHEET_NAME");
+  if (hackersSheet) pushSheet(hackersSheet, url.replace(/\/$/, "") + "/hackers", secret);
+}
 
+function pushSheet(sheetName, url, secret) {
   const rows = SpreadsheetApp.getActive()
     .getSheetByName(sheetName)
     .getDataRange()
@@ -39,4 +45,5 @@ function pushToApp() {
     muteHttpExceptions: true,
   });
   console.log(res.getResponseCode(), res.getContentText());
+  if (res.getResponseCode() >= 400) throw new Error("Sync failed for tab: " + sheetName);
 }

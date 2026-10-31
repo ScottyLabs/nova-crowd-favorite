@@ -63,7 +63,9 @@ void test("organizer listings require signatures and return empty arrays", async
 
 function seedListings(db: DatabaseSync): void {
   db.exec(`
+      INSERT INTO hackers (email) VALUES ('z@example.com');
       INSERT INTO voters VALUES ('z@example.com', 'private-hash', '2026-01-01');
+      INSERT INTO hackers (email) VALUES ('a@example.com');
       INSERT INTO voters VALUES ('a@example.com', NULL, '2026-01-02');
       INSERT INTO teams (id, response_id, name, members, active, updated_at)
         VALUES ('t1', 'r1', 'Inactive team', 'Member', 0, '2026-01-01');

@@ -31,6 +31,7 @@ function database(): DatabaseSync {
   db.exec("PRAGMA foreign_keys = ON");
   db.exec(readFileSync(new URL("./schema.sql", import.meta.url), "utf8"));
   db.exec(`
+    INSERT INTO hackers (email) VALUES ('person@example.com');
     INSERT INTO voters VALUES ('person@example.com', 'old-hash', '2026-01-01');
     INSERT INTO teams (id, response_id, name, members, updated_at) VALUES
       ('t1', 'r1', 'Own team', 'Member', '2026-01-01'),

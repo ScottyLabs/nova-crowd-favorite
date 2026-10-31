@@ -49,6 +49,7 @@ void test("current schema and existing drafts survive repeated startup", () => {
   try {
     db.exec(readFileSync(new URL("./schema.sql", import.meta.url), "utf8"));
     db.exec(`
+      INSERT INTO hackers (email) VALUES ('test@example.com');
       INSERT INTO voters (email, created_at) VALUES ('test@example.com', '2026-10-01');
       INSERT INTO ballots (voter_email, submitted_at) VALUES ('test@example.com', '2026-10-01');
     `);

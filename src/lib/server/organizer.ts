@@ -143,13 +143,10 @@ export async function addVoters(
 ): Promise<Response> {
   const input = await readBody(request, secret);
   if (input instanceof Response) return input;
-  if (origin === undefined || origin.length === 0) {
+  if (origin === undefined || origin.length === 0)
     return json({ error: "APP_URL is not configured" }, 500);
-  }
   const body = input.body;
-  if (!isVoterBody(body)) {
-    return json({ error: "provide emails (1-1000 addresses)" }, 400);
-  }
+  if (!isVoterBody(body)) return json({ error: "provide emails (1-1000 addresses)" }, 400);
   const emails = [...new Set(body.emails.map((email) => email.trim().toLowerCase()))];
   const voters = await Promise.all(
     emails.map(async (email) => {
@@ -170,7 +167,11 @@ export async function addVoters(
       INSERT INTO voters (email, token_hash, created_at) VALUES (?, ?, ?)
     `);
     const now = new Date().toISOString();
-    for (const voter of voters) insert.run(voter.email, voter.hash, now);
+    const hacker = db.prepare("INSERT OR IGNORE INTO hackers (email) VALUES (?)");
+    for (const voter of voters) {
+      hacker.run(voter.email);
+      insert.run(voter.email, voter.hash, now);
+    }
     return { voters: voters.map(({ email, url }) => ({ email, url })) };
   });
   if ("existing" in result) {

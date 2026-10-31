@@ -1,3 +1,8 @@
+CREATE TABLE IF NOT EXISTS hackers (
+  email TEXT PRIMARY KEY,
+  name TEXT
+);
+
 CREATE TABLE IF NOT EXISTS teams (
   id           TEXT PRIMARY KEY,
   response_id  TEXT UNIQUE NOT NULL,  -- stable key from the form/Sheet
@@ -12,12 +17,12 @@ CREATE TABLE IF NOT EXISTS teams (
 
 CREATE TABLE IF NOT EXISTS team_members (
   team_id  TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
-  email    TEXT NOT NULL,
+  email    TEXT NOT NULL REFERENCES hackers(email),
   PRIMARY KEY (team_id, email)
 );
 
 CREATE TABLE IF NOT EXISTS voters (
-  email       TEXT PRIMARY KEY,
+  email       TEXT PRIMARY KEY REFERENCES hackers(email),
   token_hash  TEXT UNIQUE,
   created_at  TEXT NOT NULL
 );

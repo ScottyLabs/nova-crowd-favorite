@@ -92,6 +92,25 @@ Sync sends the whole Sheet. Missing teams become inactive. Changing a name or
 timestamp in the Sheet creates a new team identity; rename through the
 dashboard to keep the same team.
 
+## Hacker names
+
+Use columns `Name` and `Email`, one person per row.
+
+For a separate tab in the submission spreadsheet, add the Script Property
+`HACKERS_SHEET_NAME` with that tab's name. Keep the existing `SHEET_NAME`,
+`SYNC_URL`, and `SYNC_HMAC_SECRET`. The same `pushToApp` trigger syncs both tabs.
+
+For a separate spreadsheet, paste the same [Apps Script](scripts/apps-script.gs)
+there. Set `SYNC_URL` to
+`https://crowd-favorite.nova.scottylabs.org/api/sync/hackers`,
+`SYNC_HMAC_SECRET` to the production secret, and `SHEET_NAME` to the hackers tab.
+Leave `HACKERS_SHEET_NAME` unset. Run `pushToApp` and add a recurring trigger.
+
+Names match voter and team membership records by email, ignoring email case.
+Sync updates names without creating voter links or changing ballots. Missing
+rows keep their previous names.
+Existing voters and team memberships migrate automatically on app startup.
+
 ## Results and exports
 
 Each place runs a fresh IRV election. A majority of continuing ballots wins;

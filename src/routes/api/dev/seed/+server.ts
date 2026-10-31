@@ -68,6 +68,7 @@ export async function GET({ url }: { url: URL }) {
   db.prepare(
     "INSERT OR IGNORE INTO qr_codes (code) VALUES ('qr-dev-new-1'), ('qr-dev-new-2')",
   ).run();
+  db.prepare("INSERT OR IGNORE INTO hackers (email) VALUES (?)").run(VOTER_EMAIL);
   db.prepare("INSERT OR IGNORE INTO team_members (team_id, email) VALUES (?, ?)").run(
     "dev-t1",
     VOTER_EMAIL,

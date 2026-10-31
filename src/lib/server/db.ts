@@ -1,7 +1,7 @@
 import { realpathSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { migrateBallots } from "./migrations";
+import { migrateBallots, migrateHackers } from "./migrations";
 import schema from "./schema.sql?raw";
 
 // Opens the database file, creating it if it doesn't exist.
@@ -25,3 +25,4 @@ db.exec(schema);
 
 // CREATE TABLE does not update databases from earlier deployments.
 migrateBallots(db);
+migrateHackers(db);

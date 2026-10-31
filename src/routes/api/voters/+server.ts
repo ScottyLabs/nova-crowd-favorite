@@ -76,7 +76,9 @@ export async function POST({ request }: { request: Request }) {
   db.exec("BEGIN");
   try {
     for (const voter of voters) {
-      upsertVoter.run(voter.email.trim().toLowerCase(), voter.token_hash, now);
+      const email = voter.email.trim().toLowerCase();
+      db.prepare("INSERT OR IGNORE INTO hackers (email) VALUES (?)").run(email);
+      upsertVoter.run(email, voter.token_hash, now);
     }
     db.exec("COMMIT");
   } catch (e) {

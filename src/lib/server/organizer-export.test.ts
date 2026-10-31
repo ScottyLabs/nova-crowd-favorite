@@ -27,8 +27,11 @@ function database(path = ":memory:"): DatabaseSync {
 
 function seed(db: DatabaseSync): void {
   db.exec(`
+    INSERT INTO hackers (email) VALUES ('v@example.com');
     INSERT INTO voters VALUES ('v@example.com', 'private-hash', '2026-01-01');
+    INSERT INTO hackers (email) VALUES ('draft@example.com');
     INSERT INTO voters VALUES ('draft@example.com', NULL, '2026-01-01');
+    INSERT INTO hackers (email) VALUES ('unsaved@example.com');
     INSERT INTO voters VALUES ('unsaved@example.com', NULL, '2026-01-01');
     INSERT INTO teams (id, response_id, name, members, active, updated_at) VALUES
       ('t1', 'r1', 'Team one', 'Member', 1, '2026-01-01'),

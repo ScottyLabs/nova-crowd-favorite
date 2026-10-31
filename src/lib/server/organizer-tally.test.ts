@@ -26,9 +26,13 @@ function database(): DatabaseSync {
       ('b', 'r2', 'Disqualified team', 'Member', 1, '2026-01-01'),
       ('c', 'r3', 'Unranked team', 'Member', 1, '2026-01-01');
     INSERT INTO team_disqualifications VALUES ('b', 'Rule violation');
+    INSERT INTO hackers (email) VALUES ('submitted@example.com');
     INSERT INTO voters VALUES ('submitted@example.com', 'private-hash', '2026-01-01');
+    INSERT INTO hackers (email) VALUES ('exhausted@example.com');
     INSERT INTO voters VALUES ('exhausted@example.com', NULL, '2026-01-01');
+    INSERT INTO hackers (email) VALUES ('draft@example.com');
     INSERT INTO voters VALUES ('draft@example.com', NULL, '2026-01-01');
+    INSERT INTO hackers (email) VALUES ('reset@example.com');
     INSERT INTO voters VALUES ('reset@example.com', NULL, '2026-01-01');
     INSERT INTO ballots (voter_email, rank_1, rank_2, status, submitted_at) VALUES
       ('submitted@example.com', 'b', 'a', 'submitted', '2026-01-01'),
@@ -81,6 +85,7 @@ void test("compact tally reports shared places with team names", async () => {
   const db = database();
   try {
     db.exec(`
+      INSERT INTO hackers (email) VALUES ('tie@example.com');
       INSERT INTO voters VALUES ('tie@example.com', NULL, '2026-01-01');
       INSERT INTO ballots (voter_email, rank_1, status, submitted_at)
         VALUES ('tie@example.com', 'c', 'submitted', '2026-01-01');
@@ -145,6 +150,7 @@ void test("zero-vote candidates are not promoted into a shared first place", asy
     db.exec(`
       INSERT INTO teams VALUES ('d', 'r4', 'Lower preference', 'Member', NULL, NULL, NULL, 1, '2026-01-01');
       UPDATE ballots SET rank_3 = 'd' WHERE voter_email = 'submitted@example.com';
+      INSERT INTO hackers (email) VALUES ('other@example.com');
       INSERT INTO voters VALUES ('other@example.com', NULL, '2026-01-01');
       INSERT INTO ballots (voter_email, rank_1, status, submitted_at)
         VALUES ('other@example.com', 'c', 'submitted', '2026-01-01');
@@ -179,6 +185,7 @@ void test("an election exceeding the exact tie-search limit returns no ranking",
     );
     for (let i = 0; i < 129; i++) {
       team.run(`team-${i}`, `response-${i}`, `Team ${i}`, "Member", "2026-01-01");
+      db.prepare("INSERT INTO hackers (email) VALUES (?)").run(`voter-${i}@example.com`);
       voter.run(`voter-${i}@example.com`, "2026-01-01");
     }
     for (let i = 0; i < 129; i++) {
