@@ -100,7 +100,7 @@
 				<span>{form?.error ?? form?.message}</span><button class="text-button" onclick={() => form = null}>Dismiss</button>
 			</div>
 		{/if}
-		<section class="panel" class:results-panel={tab === 'Results'} aria-busy={busy}>
+		<section class="panel" aria-busy={busy}>
 			<div class="section-heading">
 				<div><h2>{tab}</h2><p class="muted">
 					{#if tab === 'Voters'}{data.voters?.length} voters / {data.ballots?.filter(row => row.status === 'submitted').length} ballots submitted
@@ -227,7 +227,6 @@
 	.panel { margin-top: 20px; padding: 24px; background: var(--glass-strong); border: 1px solid #b3b5bd; } .login { max-width: 420px; margin: 64px auto; } .section-heading { margin-bottom: 20px; flex-wrap: wrap; } .section-heading p { margin-top: 6px; } .toolbar { margin-bottom: 16px; }
 	input, textarea, select { width: 100%; border: 1px solid #9698a1; border-radius: 0; padding: 11px 12px; color: var(--ink); background: white; font: inherit; } .toolbar select { width: auto; } label { display: grid; gap: 8px; margin: 16px 0; } textarea { resize: vertical; } form { margin: 0; }
 	table { width: 100%; border-collapse: collapse; table-layout: auto; } th { font-size: 12px; font-weight: 400; text-align: left; } th, td { padding: 12px 10px; border-bottom: 1px solid #d2d2d9; } td { overflow-wrap: anywhere; } th:first-child, td:first-child { padding-left: 0; } th:last-child, td:last-child { padding-right: 0; } td:last-child { text-align: right; width: 1%; } td .actions { flex-wrap: nowrap; justify-content: flex-end; } td strong, td .muted { display: block; } td .muted { font-size: 12px; margin-top: 3px; } .badge { font-size: 12px; white-space: nowrap; } .badge.submitted { color: var(--cobalt); } .badge.excluded, .error { color: #a92018; }
-	.results-panel { max-width: 720px; margin-inline: auto; }
 	.result-note { display: flex; align-items: center; gap: 12px; font-size: 12px; }
 	.result-status { padding: 4px 8px; background: var(--mist); }
 	.rankings, .team-names { list-style: none; padding: 0; margin: 0; }
