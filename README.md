@@ -28,6 +28,10 @@ Before the event, check teams, add voters, print QR codes, and set the closing
 time. After closing, calculate results and download the ballots and database.
 Use **Refresh** to reload lists and voting status.
 
+**Live leaderboard** opens a screen for the event board. It shows the top 10
+named voters by unique teams collected and updates every 10 seconds. Ties share a
+rank. It uses the organizer sign-in; keep that browser signed in on the display.
+
 Send each voter their own link; the app does not send emails. Replacing a link
 invalidates the old one. A reset archives the ballot and preserves the voter's
 collection and link. Voting must be open for them to submit again.
@@ -108,7 +112,7 @@ Leave `HACKERS_SHEET_NAME` unset. Run `pushToApp` and add a recurring trigger.
 
 Names match voter and team membership records by email, ignoring email case.
 Sync updates names without creating voter links or changing ballots. Missing
-rows keep their previous names.
+rows keep their previous names. People without a name stay off the leaderboard.
 Existing voters and team memberships migrate automatically on app startup.
 
 ## Results and exports

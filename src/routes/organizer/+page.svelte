@@ -71,6 +71,7 @@
 	<header>
 		<div><span class="eyebrow">Crowd Favorite</span><h1>Organizer</h1></div>
 		{#if data.authenticated}<div class="actions">
+			<a class="button quiet" href="/organizer/leaderboard" target="_blank" rel="noreferrer">Live leaderboard</a>
 			<button class="quiet" disabled={busy} onclick={() => invalidateAll()}>Refresh</button>
 			<form method="POST" action="?/logout"><button class="quiet">Sign out</button></form>
 		</div>{/if}
