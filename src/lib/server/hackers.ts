@@ -4,9 +4,10 @@ import { EMAIL_PATTERN, inTransaction } from "./organizer.ts";
 export function syncHackers(db: DatabaseSync, rows: string[][]): { synced: number } {
   const [header = [], ...records] = rows;
   const columns = header.map((cell) => cell.trim().toLowerCase());
-  const nameColumn = columns.indexOf("name");
-  const emailColumn = columns.indexOf("email");
-  if (nameColumn < 0 || emailColumn < 0) throw new Error("Sheet needs Name and Email columns.");
+  const nameColumn = columns.indexOf("full name");
+  const emailColumn = columns.indexOf("email address");
+  if (nameColumn < 0 || emailColumn < 0)
+    throw new Error("Sheet needs Full Name and Email Address columns.");
   const hackers = new Map<string, string>();
   for (const [index, row] of records.entries()) {
     if (row.every((cell) => !cell.trim())) continue;

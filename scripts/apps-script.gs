@@ -6,7 +6,7 @@
 //      SYNC_URL         = https://<app-url>/api/sync
 //      SYNC_HMAC_SECRET = <same value as in OpenBao>
 //      SHEET_NAME       = <team submissions tab>
-//      HACKERS_SHEET_NAME = <optional hackers tab with Name and Email columns>
+//      HACKERS_SHEET_NAME = <optional hackers tab with Full Name and Email Address columns>
 // 3. Run pushToApp, then add a recurring time-driven trigger.
 
 function pushToApp() {

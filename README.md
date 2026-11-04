@@ -98,7 +98,7 @@ dashboard to keep the same team.
 
 ## Hacker names
 
-Use columns `Name` and `Email`, one person per row.
+Use columns `Full Name` and `Email Address`, one person per row.
 
 For a separate tab in the submission spreadsheet, add the Script Property
 `HACKERS_SHEET_NAME` with that tab's name. Keep the existing `SHEET_NAME`,
