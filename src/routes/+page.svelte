@@ -33,6 +33,6 @@
 {:else if checked}
 	<NeedLinkScreen
 		title="Open your voting link first"
-		message="Find the email from [organizers] and tap the link. Open it in your browser."
+		message="Find your voting email from the Nova organizers and open your personal link."
 	/>
 {/if}

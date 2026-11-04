@@ -19,6 +19,13 @@ export function migrateBallots(db: DatabaseSync): void {
 
 /** Link existing voters and team memberships without changing their email identities. */
 export function migrateHackers(db: DatabaseSync): void {
+  if (
+    !db
+      .prepare("PRAGMA table_info(hackers)")
+      .all()
+      .some((column) => column.name === "registered_at")
+  )
+    db.exec("ALTER TABLE hackers ADD COLUMN registered_at TEXT");
   const definitions = {
     voters: `email TEXT PRIMARY KEY REFERENCES hackers(email),
       token_hash TEXT UNIQUE, created_at TEXT NOT NULL`,

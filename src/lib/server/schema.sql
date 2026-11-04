@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS hackers (
   email TEXT PRIMARY KEY,
-  name TEXT
+  name TEXT,
+  registered_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS teams (
