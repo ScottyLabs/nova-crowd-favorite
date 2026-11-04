@@ -6,7 +6,7 @@
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
-	const tabs = ['Voters', 'Teams', 'QR codes', 'Results', 'Settings'];
+	const tabs = ['Voters', 'Teams', 'Hackers', 'QR codes', 'Results', 'Settings'];
 	let tab = $state('Voters');
 	let search = $state('');
 	let status = $state('all');
@@ -27,6 +27,7 @@
 	const voters = $derived((data.voters ?? []).filter(row =>
 		matches(row.email, row.team, ...Object.values(ballots.get(row.email) ?? {})) && (status === 'all' || (row.status ?? 'none') === status)));
 	const teams = $derived((data.teams ?? []).filter(row => matches(row.name, row.members, row.emails)));
+	const hackers = $derived((data.hackers ?? []).filter(row => matches(row.name, row.email)));
 	const stickers = $derived((data.stickers ?? []).map((row, index) => ({ number: index + 1, code: row.code, team: row.team, email: row.email }))
 		.filter(row => matches(row.number, row.team, row.email, row.code)));
 	const ranking = $derived(form?.result?.ranking ?? []);
@@ -106,6 +107,7 @@
 				<div><h2>{tab}</h2><p class="muted">
 					{#if tab === 'Voters'}{data.voters?.length} voters / {data.ballots?.filter(row => row.status === 'submitted').length} ballots submitted
 					{:else if tab === 'Teams'}{data.teams?.length} registered teams
+					{:else if tab === 'Hackers'}{data.hackers?.length} hackers
 					{:else if tab === 'QR codes'}{data.stickers?.filter(row => row.team === null).length} unclaimed / {data.stickers?.length} total
 					{:else if tab === 'Results'}{form?.result?.ranking ? `${form.result.submittedBallots} submitted ballots` : 'Count submitted ballots'}
 					{:else}Voting and database controls{/if}
@@ -116,10 +118,10 @@
 					{:else if tab === 'Results'}{@render action('tally', {}, form?.result?.ranking ? 'Recalculate' : 'Calculate results', 'primary')}{/if}
 				</div>
 			</div>
-			{#if ['Voters', 'Teams', 'QR codes'].includes(tab)}
+			{#if ['Voters', 'Teams', 'Hackers', 'QR codes'].includes(tab)}
 				<div class="toolbar">
 					<input type="search" aria-label={`Search ${tab.toLowerCase()}`} bind:value={search}
-						placeholder={tab === 'Voters' ? 'Search email, team, or ballot' : tab === 'Teams' ? 'Search team or member' : 'Search number or team'} />
+						placeholder={tab === 'Voters' ? 'Search email, team, or ballot' : tab === 'Teams' ? 'Search team or member' : tab === 'Hackers' ? 'Search name or email' : 'Search number or team'} />
 					{#if tab === 'Voters'}<select aria-label="Ballot status" bind:value={status}>
 						<option value="all">All ballots</option><option value="submitted">Submitted</option><option value="draft">Draft</option><option value="none">Not started</option>
 					</select>{/if}
@@ -138,6 +140,11 @@
 						<td><span class="badge" class:excluded={row.reason !== null}>{row.reason !== null ? 'Disqualified' : row.active ? 'Eligible' : 'Inactive'}</span></td>
 						<td><button class="quiet" onclick={() => open('team', String(row.id))}>Edit<span class="sr-only"> {row.name}</span></button></td></tr>
 					{:else}<tr><td colspan="3" class="empty">{search ? 'No matching teams.' : 'Teams appear here after the submission Sheet syncs.'}</td></tr>{/each}
+				</tbody></table>
+			{:else if tab === 'Hackers'}
+				<table class="hackers" aria-label="Hackers"><thead><tr><th>Name</th><th>Email</th><th>Registered</th></tr></thead><tbody>
+					{#each hackers as row}<tr><td><strong>{row.name || 'No name'}</strong></td><td>{row.email}</td><td>{row.registeredAt || 'Not synced'}</td></tr>
+					{:else}<tr><td colspan="3" class="empty">{search ? 'No matching hackers.' : 'Hackers appear here after the registration Sheet syncs.'}</td></tr>{/each}
 				</tbody></table>
 			{:else if tab === 'QR codes'}
 				<table aria-label="QR codes"><thead><tr><th>Number</th><th>Team</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>
@@ -230,6 +237,7 @@
 	input, textarea, select { width: 100%; border: 1px solid #9698a1; border-radius: 0; padding: 11px 12px; color: var(--ink); background: white; font: inherit; } .toolbar select { width: auto; } label { display: grid; gap: 8px; margin: 16px 0; } textarea { resize: vertical; } form { margin: 0; }
 	table { width: 100%; border-collapse: collapse; table-layout: auto; } th { font-size: 12px; font-weight: 400; text-align: left; } th, td { padding: 12px 10px; border-bottom: 1px solid #d2d2d9; } td { overflow-wrap: anywhere; } th:first-child, td:first-child { padding-left: 0; } th:last-child, td:last-child { padding-right: 0; } td:last-child { text-align: right; width: 1%; } td .actions { flex-wrap: nowrap; justify-content: flex-end; } td strong, td .muted { display: block; } td .muted { font-size: 12px; margin-top: 3px; } .badge { font-size: 12px; white-space: nowrap; } .badge.submitted { color: var(--cobalt); } .badge.excluded, .error { color: #a92018; }
 	.result-note { display: flex; align-items: center; gap: 12px; font-size: 12px; }
+	table.hackers td:last-child { text-align: left; width: auto; }
 	.result-status { padding: 4px 8px; background: var(--mist); }
 	.rankings, .team-names { list-style: none; padding: 0; margin: 0; }
 	.result-group { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 20px; padding: 24px 0; border-top: 1px solid #d2d2d9; }

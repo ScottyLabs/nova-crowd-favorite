@@ -2,6 +2,11 @@ import type { DatabaseSync } from "node:sqlite";
 import { inTransaction } from "./organizer.ts";
 
 export function dashboardRecords(db: DatabaseSync) {
+  const hackers = db
+    .prepare(
+      "SELECT email, name, registered_at AS registeredAt FROM hackers ORDER BY name COLLATE NOCASE, email",
+    )
+    .all();
   const teams = db
     .prepare(`SELECT t.id, t.name, t.members, t.active, d.reason,
 		(SELECT group_concat(email, ', ') FROM team_members WHERE team_id = t.id) AS emails
@@ -28,6 +33,7 @@ export function dashboardRecords(db: DatabaseSync) {
   return {
     teams,
     voters,
+    hackers,
     ballots,
     stickers,
     deadline: typeof deadline?.value === "string" ? deadline.value : null,
