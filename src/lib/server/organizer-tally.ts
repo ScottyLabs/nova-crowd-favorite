@@ -1,3 +1,4 @@
+import { eligibleTeamSql } from "./team-eligibility.ts";
 import { eligibleVoterSql } from "./voter-eligibility.ts";
 import type { DatabaseSync } from "node:sqlite";
 import { verifySignature } from "./hmac.ts";
@@ -10,8 +11,8 @@ function readElection(db: DatabaseSync) {
     const teams = db
       .prepare(`
       SELECT teams.id, teams.name,
-        d.team_id IS NOT NULL AS disqualified
-      FROM teams LEFT JOIN team_disqualifications d ON d.team_id = teams.id
+        ${eligibleTeamSql("teams")} AS eligible
+      FROM teams
       ORDER BY teams.id
     `)
       .all();
@@ -43,9 +44,7 @@ export async function tallyVotes(
   if (!valid) return json({ error: "invalid signature" }, 401);
   const { teams, ballots, closesAt } = readElection(db);
   const eligible = new Set(
-    teams.flatMap((team) =>
-      typeof team.id === "string" && team.disqualified === 0 ? [team.id] : [],
-    ),
+    teams.flatMap((team) => (typeof team.id === "string" && team.eligible === 1 ? [team.id] : [])),
   );
   const rankings = ballots.map((ballot) =>
     [ballot.rank_1, ballot.rank_2, ballot.rank_3, ballot.rank_4, ballot.rank_5].filter(

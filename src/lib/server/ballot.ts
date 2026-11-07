@@ -1,3 +1,4 @@
+import { eligibleTeamSql } from "./team-eligibility";
 import { db } from "./db";
 import { isVotingClosed } from "./voting";
 
@@ -15,6 +16,10 @@ export interface Ballot {
   votingClosed: boolean;
 }
 
+const eligibleTeam = db.prepare(
+  `SELECT id FROM teams WHERE id = ? AND ${eligibleTeamSql("teams")}`,
+);
+
 const selectBallot = db.prepare(`
   SELECT rank_1, rank_2, rank_3, rank_4, rank_5, status, submitted_at
   FROM ballots
@@ -27,7 +32,7 @@ export function getBallot(email: string): Ballot {
   const votingClosed = isVotingClosed();
   if (row === undefined) return { ranked: [], status: "draft", submittedAt: null, votingClosed };
   const ranked = [row.rank_1, row.rank_2, row.rank_3, row.rank_4, row.rank_5].filter(
-    (id): id is string => typeof id === "string",
+    (id): id is string => typeof id === "string" && eligibleTeam.get(id) !== undefined,
   );
   return {
     ranked,

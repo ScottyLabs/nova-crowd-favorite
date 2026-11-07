@@ -10,6 +10,7 @@
 	let tab = $state('Voters');
 	let search = $state('');
 	let status = $state('all');
+	let teamStatus = $state('all');
 	let busy = $state(false);
 	let dialog = $state<HTMLDialogElement>();
 	let editor = $state('');
@@ -35,7 +36,9 @@
 	const ballot = $derived(ballots.get(selected));
 	const voters = $derived((data.voters ?? []).filter(row =>
 		matches(row.name, row.email, row.team, ...Object.values(ballots.get(row.email) ?? {})) && (status === 'all' || (row.status ?? 'none') === status)));
-	const teams = $derived((data.teams ?? []).filter(row => matches(row.name, row.members, row.emails)));
+	const teams = $derived((data.teams ?? []).filter(row =>
+		matches(row.name, row.members, row.emails) && (teamStatus === 'all' ||
+			teamStatus === row.status)));
 	const hackers = $derived((data.hackers ?? []).filter(row => matches(row.name, row.email)));
 	const stickers = $derived((data.stickers ?? []).map((row, index) => ({ number: index + 1, code: row.code, team: row.team, email: row.email }))
 		.filter(row => matches(row.number, row.team, row.email, row.code)));
@@ -116,7 +119,7 @@
 			<div class="section-heading">
 				<div><h2>{tab}</h2><p class="muted">
 					{#if tab === 'Voters'}{data.voters?.length} voters / {data.ballots?.filter(row => row.status === 'submitted').length} ballots submitted
-					{:else if tab === 'Teams'}{data.teams?.length} registered teams
+					{:else if tab === 'Teams'}{teams.length} of {data.teams?.length} registered teams
 					{:else if tab === 'Hackers'}{data.hackers?.length} hackers
 					{:else if tab === 'QR codes'}{data.stickers?.filter(row => row.team === null).length} unclaimed / {data.stickers?.length} total
 					{:else if tab === 'Results'}{form?.result?.ranking ? `${form.result.submittedBallots} submitted ballots` : 'Count submitted ballots'}
@@ -134,7 +137,9 @@
 						placeholder={tab === 'Voters' ? 'Search name, email, team, or ballot' : tab === 'Teams' ? 'Search team or member' : tab === 'Hackers' ? 'Search name or email' : 'Search number or team'} />
 					{#if tab === 'Voters'}<select aria-label="Ballot status" bind:value={status}>
 						<option value="all">All ballots</option><option value="submitted">Submitted</option><option value="draft">Draft</option><option value="none">Not started</option>
-					</select>{/if}
+					</select>{:else if tab === 'Teams'}<select aria-label="Team status" bind:value={teamStatus}>
+                        <option value="all">All teams</option><option value="eligible">Eligible</option><option value="disqualified">Disqualified</option><option value="unsubmitted">Unsubmitted</option>
+                    </select>{/if}
 				</div>
 			{/if}
 			{#if tab === 'Voters'}
@@ -147,9 +152,9 @@
 			{:else if tab === 'Teams'}
 				<table aria-label="Teams"><thead><tr><th>Team</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>
 					{#each teams as row}<tr><td><strong>{row.name}</strong><span class="muted">{row.members}</span></td>
-						<td><span class="badge" class:excluded={row.reason !== null}>{row.reason !== null ? 'Disqualified' : row.active ? 'Eligible' : 'Inactive'}</span></td>
+						<td><span class="badge" class:excluded={row.reason !== null}>{row.status === 'disqualified' ? 'Disqualified' : row.status === 'unsubmitted' ? 'Unsubmitted' : 'Eligible'}</span></td>
 						<td><button class="quiet" onclick={() => open('team', String(row.id))}>Edit<span class="sr-only"> {row.name}</span></button></td></tr>
-					{:else}<tr><td colspan="3" class="empty">{search ? 'No matching teams.' : 'Teams appear here after the submission Sheet syncs.'}</td></tr>{/each}
+					{:else}<tr><td colspan="3" class="empty">{search || teamStatus !== 'all' ? 'No matching teams.' : 'Teams appear here after the submission Sheet syncs.'}</td></tr>{/each}
 				</tbody></table>
 			{:else if tab === 'Hackers'}
 				<table class="hackers" aria-label="Hackers"><thead><tr><th>Name</th><th>Email</th><th>Checked in</th></tr></thead><tbody>
@@ -225,7 +230,10 @@
 				<form method="POST" action="?/run" use:enhance={submit}><input type="hidden" name="operation" value="team-name" /><input type="hidden" name="teamId" value={selected} />
 					<label>Team name<input name="name" value={String(team?.name ?? '')} maxlength="200" required /></label><p class="muted">{team?.members}</p><p class="muted">{team?.emails || 'No member emails in the Sheet.'}</p><button class="primary" disabled={busy}>Save name</button>
 				</form>
-				<div class="dialog-section"><h3>Eligibility</h3><p>{team?.reason !== null ? `Disqualified: ${team?.reason || 'No reason given'}` : 'This team is included in the results.'}</p>
+                <div class="dialog-section"><h3>Submission</h3><p>{team?.status === 'unsubmitted' ? 'This team cannot receive votes. Members can still vote unless disqualified.' : 'Mark a team unsubmitted to stop it receiving votes while allowing its members to vote.'}</p>
+                    {@render action('team-submission', { teamId: selected, submitted: String(team?.status === 'unsubmitted') }, team?.status === 'unsubmitted' ? 'Mark submitted' : 'Mark unsubmitted', 'quiet')}
+                </div>
+				<div class="dialog-section"><h3>Eligibility</h3><p>{team?.reason !== null ? `Disqualified: ${team?.reason || 'No reason given'}` : team?.status === 'unsubmitted' ? 'Unsubmitted: members can vote, but this team cannot receive votes.' : 'Eligible: members can vote and this team can receive votes.'}</p>
 					<button class="quiet" onclick={() => open(team?.reason !== null ? 'reinstate' : 'disqualify', selected)}>{team?.reason !== null ? 'Reinstate team' : 'Disqualify team'}</button>
 				</div>
 			{:else if editor === 'reissue'}<p>Replace the link for <strong>{selected}</strong>? Their old link will stop working.</p>{@render action('reissue', { email: selected }, 'Replace link', 'primary')}

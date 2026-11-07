@@ -1,3 +1,4 @@
+import { eligibleTeamSql } from "./team-eligibility";
 import { db } from "./db";
 
 // Shared team and QR code helpers for /api/my-team, /api/collection and /api/qr/claim.// QR stickers are printed before the event with no team. The first teammate who
@@ -26,13 +27,13 @@ const selectVoterTeam = db.prepare(`
     EXISTS (SELECT 1 FROM qr_codes WHERE qr_codes.team_id = teams.id) AS linked
   FROM team_members
   JOIN teams ON teams.id = team_members.team_id
-  WHERE lower(team_members.email) = ? AND teams.active = 1
+  WHERE lower(team_members.email) = ? AND ${eligibleTeamSql("teams")}
   ORDER BY teams.id
   LIMIT 1
 `);
 
 const selectTeam = db.prepare(`
-  SELECT id, name, members FROM teams WHERE id = ? AND active = 1
+  SELECT id, name, members FROM teams WHERE id = ? AND ${eligibleTeamSql("teams")}
 `);
 
 const selectQr = db.prepare(`

@@ -1,3 +1,4 @@
+import { eligibleTeamSql } from "../../../lib/server/team-eligibility";
 import { unauthorized, voterEmail } from "../../../lib/server/auth";
 import { db } from "../../../lib/server/db";
 import { getQr, toTeam } from "../../../lib/server/team";
@@ -14,8 +15,7 @@ const selectCollection = db.prepare(`
   SELECT teams.id, teams.name, teams.members, collections.note
   FROM collections
   JOIN teams ON teams.id = collections.team_id
-  WHERE collections.voter_email = ? AND teams.active = 1
-    AND NOT EXISTS (SELECT 1 FROM team_disqualifications d WHERE d.team_id = teams.id)
+  WHERE collections.voter_email = ? AND ${eligibleTeamSql("teams")}
   ORDER BY collections.scanned_at
 `);
 
@@ -23,8 +23,7 @@ const selectTeamByQr = db.prepare(`
   SELECT teams.id, teams.name, teams.members
   FROM qr_codes
   JOIN teams ON teams.id = qr_codes.team_id
-  WHERE qr_codes.code = ? AND teams.active = 1
-    AND NOT EXISTS (SELECT 1 FROM team_disqualifications d WHERE d.team_id = teams.id)
+  WHERE qr_codes.code = ? AND ${eligibleTeamSql("teams")}
 `);
 
 const isMember = db.prepare(`

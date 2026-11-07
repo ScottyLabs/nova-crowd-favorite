@@ -2,7 +2,12 @@ import { fail, redirect, error } from "@sveltejs/kit";
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { db } from "../../lib/server/db";
-import { dashboardRecords, ensureVoterLinks, updateTeamName } from "../../lib/server/dashboard";
+import {
+  dashboardRecords,
+  ensureVoterLinks,
+  setTeamSubmission,
+  updateTeamName,
+} from "../../lib/server/dashboard";
 import {
   allowLogin,
   apiRequest,
@@ -157,6 +162,10 @@ export const actions: Actions = {
     try {
       const form = await request.formData();
       if (form.get("operation") === "restore") return { message: await restore(form) };
+      if (form.get("operation") === "team-submission") {
+        setTeamSubmission(db, text(form, "teamId"), text(form, "submitted") === "true");
+        return { message: "Team submission status updated." };
+      }
       if (form.get("operation") === "team-name") {
         updateTeamName(db, text(form, "teamId"), text(form, "name"));
         return { message: "Team name saved." };

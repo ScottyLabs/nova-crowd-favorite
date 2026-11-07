@@ -22,7 +22,7 @@ function database(): DatabaseSync {
   db.exec(readFileSync(new URL("./schema.sql", import.meta.url), "utf8"));
   db.exec(`
     INSERT INTO teams (id, response_id, name, members, active, updated_at) VALUES
-      ('a', 'r1', 'Inactive team', 'Member', 0, '2026-01-01'),
+      ('a', 'r1', 'Eligible team', 'Member', 1, '2026-01-01'),
       ('b', 'r2', 'Disqualified team', 'Member', 1, '2026-01-01'),
       ('c', 'r3', 'Unranked team', 'Member', 1, '2026-01-01');
     INSERT INTO team_disqualifications VALUES ('b', 'Rule violation');
@@ -59,7 +59,7 @@ void test("tally rejects unsigned, expired, incorrect and missing-secret request
   }
 });
 
-void test("tally counts submitted ballots, skips disqualifications, preserves inactive teams and data", async () => {
+void test("tally counts submitted ballots, skips disqualifications, excludes ineligible teams and preserves data", async () => {
   const db = database();
   try {
     const before = db.prepare("SELECT * FROM ballots ORDER BY voter_email").all();
@@ -73,7 +73,7 @@ void test("tally counts submitted ballots, skips disqualifications, preserves in
       generatedAt: result.generatedAt,
       provisional: true,
       submittedBallots: 2,
-      ranking: [{ rank: 1, teamId: "a", name: "Inactive team" }],
+      ranking: [{ rank: 1, teamId: "a", name: "Eligible team" }],
     });
     deepStrictEqual(db.prepare("SELECT * FROM ballots ORDER BY voter_email").all(), before);
   } finally {
@@ -97,7 +97,7 @@ void test("compact tally reports shared places with team names", async () => {
       provisional: true,
       submittedBallots: 3,
       ranking: [
-        { rank: 1, teamId: "a", name: "Inactive team" },
+        { rank: 1, teamId: "a", name: "Eligible team" },
         { rank: 1, teamId: "c", name: "Unranked team" },
       ],
     });
@@ -163,7 +163,7 @@ void test("zero-vote candidates are not promoted into a shared first place", asy
         "submittedBallots" in result,
     );
     deepStrictEqual(result.ranking, [
-      { rank: 1, teamId: "a", name: "Inactive team" },
+      { rank: 1, teamId: "a", name: "Eligible team" },
       { rank: 1, teamId: "c", name: "Unranked team" },
       { rank: 3, teamId: "d", name: "Lower preference" },
     ]);
@@ -230,6 +230,31 @@ void test("disqualified team members' existing ballots stop counting until reins
         "submittedBallots" in restoredBody,
     );
     strictEqual(restoredBody.submittedBallots, 2);
+  } finally {
+    db.close();
+  }
+});
+
+void test("unsubmitted members can vote but their team cannot receive votes", async () => {
+  const db = database();
+  try {
+    db.exec(`INSERT INTO team_members VALUES ('a', 'submitted@example.com');
+      INSERT INTO settings VALUES ('team_unsubmitted:a', 'true');
+      UPDATE ballots SET rank_3 = 'c' WHERE voter_email = 'submitted@example.com';`);
+    const result: unknown = await (await tallyVotes(db, signed(), secret)).json();
+    ok(typeof result === "object" && result !== null && "generatedAt" in result);
+    deepStrictEqual(result, {
+      generatedAt: result.generatedAt,
+      provisional: true,
+      submittedBallots: 2,
+      ranking: [{ rank: 1, teamId: "c", name: "Unranked team" }],
+    });
+    db.exec(
+      "DELETE FROM settings WHERE key = 'team_unsubmitted:a'; UPDATE teams SET active = 0 WHERE id = 'a'",
+    );
+    const inactive: unknown = await (await tallyVotes(db, signed(), secret)).json();
+    ok(typeof inactive === "object" && inactive !== null && "ranking" in inactive);
+    deepStrictEqual(inactive.ranking, [{ rank: 1, teamId: "c", name: "Unranked team" }]);
   } finally {
     db.close();
   }

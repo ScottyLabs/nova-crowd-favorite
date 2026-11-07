@@ -1,3 +1,4 @@
+import { eligibleTeamSql } from "../../../lib/server/team-eligibility";
 import { unauthorized, voterEmail } from "../../../lib/server/auth";
 import { getBallot, MAX_RANKED } from "../../../lib/server/ballot";
 import { db } from "../../../lib/server/db";
@@ -9,9 +10,8 @@ import { isVotingClosed, votingClosedResponse } from "../../../lib/server/voting
 // Both need `Authorization: Bearer <voter code>`.
 
 const collectedTeams = db.prepare(`
-  SELECT collections.team_id FROM collections
-  WHERE voter_email = ?
-    AND NOT EXISTS (SELECT 1 FROM team_disqualifications d WHERE d.team_id = collections.team_id)
+  SELECT collections.team_id FROM collections JOIN teams ON teams.id = collections.team_id
+  WHERE voter_email = ? AND ${eligibleTeamSql("teams")}
 `);
 
 const ownTeams = db.prepare(`

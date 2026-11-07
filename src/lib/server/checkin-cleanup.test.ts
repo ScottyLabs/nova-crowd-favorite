@@ -7,7 +7,7 @@ import { dashboardRecords } from "./dashboard.ts";
 
 const schema = readFileSync(new URL("./schema.sql", import.meta.url), "utf8");
 
-void test("cleanup removes unused registration identities and keeps check-in and historical activity", () => {
+void test("cleanup preserves registered participants without submissions and historical activity", () => {
   const db = new DatabaseSync(":memory:");
   try {
     db.exec(schema);
@@ -35,8 +35,8 @@ void test("cleanup removes unused registration identities and keeps check-in and
       backups++;
     });
     strictEqual(backups, 1);
-    strictEqual(db.prepare("SELECT COUNT(*) AS count FROM hackers").get()?.count, 5);
-    strictEqual(db.prepare("SELECT COUNT(*) AS count FROM voters").get()?.count, 5);
+    strictEqual(db.prepare("SELECT COUNT(*) AS count FROM hackers").get()?.count, 6);
+    strictEqual(db.prepare("SELECT COUNT(*) AS count FROM voters").get()?.count, 6);
     strictEqual(
       db.prepare("SELECT token_hash FROM voters WHERE email = 'angelaw3@andrew.cmu.edu'").get()
         ?.token_hash,
@@ -44,9 +44,9 @@ void test("cleanup removes unused registration identities and keeps check-in and
     );
     deepStrictEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
     const hackers = dashboardRecords(db).hackers;
-    strictEqual(hackers.length, 1);
-    strictEqual(hackers[0].email, "angelaw3@andrew.cmu.edu");
-    strictEqual(hackers[0].checkedInAt, "check-in");
+    strictEqual(hackers.length, 6);
+    const checkedIn = hackers.find((row) => row.email === "angelaw3@andrew.cmu.edu");
+    strictEqual(checkedIn?.checkedInAt, "check-in");
   } finally {
     db.close();
   }

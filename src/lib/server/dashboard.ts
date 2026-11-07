@@ -39,14 +39,16 @@ export function dashboardRecords(db: DatabaseSync) {
   const hackers = db
     .prepare(
       `SELECT h.email, h.name, h.registered_at AS checkedInAt FROM hackers h
-      WHERE EXISTS (SELECT 1 FROM team_members m JOIN teams t ON t.id = m.team_id
-        WHERE m.email = h.email AND t.active = 1)
+      WHERE (h.registered_at IS NOT NULL OR EXISTS (SELECT 1 FROM team_members m WHERE m.email = h.email))
       AND ${eligibleVoterSql("h.email")}
       ORDER BY h.name COLLATE NOCASE, h.email`,
     )
     .all();
   const teams = db
     .prepare(`SELECT t.id, t.name, t.members, t.active, d.reason,
+        CASE WHEN d.team_id IS NOT NULL THEN 'disqualified'
+          WHEN t.active = 0 OR EXISTS (SELECT 1 FROM settings s WHERE s.key = 'team_unsubmitted:' || t.id)
+          THEN 'unsubmitted' ELSE 'eligible' END AS status,
 		(SELECT group_concat(email, ', ') FROM team_members WHERE team_id = t.id) AS emails
 		FROM teams t LEFT JOIN team_disqualifications d ON d.team_id = t.id ORDER BY t.name`)
     .all();
@@ -94,5 +96,19 @@ export function updateTeamName(db: DatabaseSync, id: string, name: string): void
     db.prepare(
       "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
     ).run(`team_name:${id}`, name.trim());
+  });
+}
+
+export function setTeamSubmission(db: DatabaseSync, id: string, submitted: boolean): void {
+  if (!db.prepare("SELECT id FROM teams WHERE id = ?").get(id)) throw new Error("Team not found.");
+  inTransaction(db, () => {
+    if (submitted) {
+      db.prepare("DELETE FROM settings WHERE key = ?").run(`team_unsubmitted:${id}`);
+      db.prepare("UPDATE teams SET active = 1 WHERE id = ?").run(id);
+    } else {
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, 'true')").run(
+        `team_unsubmitted:${id}`,
+      );
+    }
   });
 }
