@@ -92,6 +92,12 @@ void test("voter links are hashed and emails are normalized", async () => {
     deepStrictEqual(result, { voters: [{ email: "person@example.com", url: voter.url }] });
     const code = new URL(voter.url).pathname.slice(3);
     strictEqual(
+      db
+        .prepare("SELECT value FROM settings WHERE key = ?")
+        .get(`voter_link:${await hashCode(code)}`)?.value,
+      voter.url,
+    );
+    strictEqual(
       db.prepare("SELECT token_hash FROM voters").get()?.token_hash,
       await hashCode(code),
     );

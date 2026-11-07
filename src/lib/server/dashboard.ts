@@ -16,10 +16,11 @@ export function dashboardRecords(db: DatabaseSync) {
 		FROM teams t LEFT JOIN team_disqualifications d ON d.team_id = t.id ORDER BY t.name`)
     .all();
   const voters = db
-    .prepare(`SELECT v.email, b.status,
+    .prepare(`SELECT v.email, b.status, l.value AS url,
 		(SELECT group_concat(t.name, ', ') FROM teams t JOIN team_members m ON m.team_id = t.id
 		WHERE lower(m.email) = v.email AND t.active = 1) AS team
-		FROM voters v LEFT JOIN ballots b ON b.voter_email = v.email ORDER BY v.email`)
+		FROM voters v LEFT JOIN ballots b ON b.voter_email = v.email
+        LEFT JOIN settings l ON l.key = 'voter_link:' || v.token_hash ORDER BY v.email`)
     .all();
   const ballots = db
     .prepare(`SELECT b.voter_email AS email, b.status, b.submitted_at AS updated,

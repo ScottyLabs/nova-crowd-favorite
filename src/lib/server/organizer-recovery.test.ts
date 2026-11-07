@@ -95,6 +95,10 @@ void test("reissuing rotates credentials while preserving ballots, collections a
     const hash = db.prepare("SELECT token_hash FROM voters").get()?.token_hash;
     strictEqual(hash, await hashCode(new URL(body.url).pathname.slice(3)));
     notStrictEqual(hash, "old-hash");
+    strictEqual(
+      db.prepare("SELECT value FROM settings WHERE key = ?").get(`voter_link:${hash}`)?.value,
+      body.url,
+    );
     deepStrictEqual(
       ["ballots", "collections", "qr_codes"].map((t) => db.prepare(`SELECT * FROM ${t}`).all()),
       before,

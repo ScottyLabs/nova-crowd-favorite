@@ -135,6 +135,10 @@ function isVoterBody(body: unknown): body is { emails: string[] } {
   );
 }
 
+function saveVoterLink(db: DatabaseSync, hash: string, url: string): void {
+  db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run(`voter_link:${hash}`, url);
+}
+
 export async function addVoters(
   db: DatabaseSync,
   request: Request,
@@ -158,19 +162,19 @@ export async function addVoters(
       };
     }),
   );
-  // Compute hashes before starting the SQLite transaction.
   const result = inTransaction(db, () => {
     const exists = db.prepare("SELECT 1 FROM voters WHERE email = ?");
     const existing = emails.filter((email) => exists.get(email) !== undefined);
     if (existing.length > 0) return { existing };
-    const insert = db.prepare(`
-      INSERT INTO voters (email, token_hash, created_at) VALUES (?, ?, ?)
-    `);
+    const insert = db.prepare(
+      "INSERT INTO voters (email, token_hash, created_at) VALUES (?, ?, ?)",
+    );
     const now = new Date().toISOString();
     const hacker = db.prepare("INSERT OR IGNORE INTO hackers (email) VALUES (?)");
     for (const voter of voters) {
       hacker.run(voter.email);
       insert.run(voter.email, voter.hash, now);
+      saveVoterLink(db, voter.hash, voter.url);
     }
     return { voters: voters.map(({ email, url }) => ({ email, url })) };
   });

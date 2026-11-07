@@ -123,7 +123,7 @@
 					{:else}Voting and database controls{/if}
 				</p></div>
 				<div class="actions">
-					{#if tab === 'Voters'}<a class="button quiet" href="/organizer/download/ballots">Export ballots</a><button class="primary" onclick={() => open('voters')}>Add voters</button>
+					{#if tab === 'Voters'}<a class="button quiet" href="/organizer/download/voters.csv">Export voters CSV</a><a class="button quiet" href="/organizer/download/voters.tsv">Export voters TSV</a><a class="button quiet" href="/organizer/download/ballots">Export ballots</a><button class="primary" onclick={() => open('voters')}>Add voters</button>
 					{:else if tab === 'QR codes'}<a class="button quiet" href="/organizer/stickers" target="_blank" rel="noreferrer">Print all</a><button class="primary" onclick={() => open('stickers')}>Create QR codes</button>
 					{:else if tab === 'Results'}{@render action('tally', {}, form?.result?.ranking ? 'Recalculate' : 'Calculate results', 'primary')}{/if}
 				</div>
@@ -139,7 +139,7 @@
 			{/if}
 			{#if tab === 'Voters'}
 				<table aria-label="Voters"><thead><tr><th>Voter</th><th class="desktop">Team</th><th class="desktop">Ballot</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>
-					{#each voters as row}<tr><td><strong>{row.email}</strong><span class="mobile muted">{row.team || 'No team'} / {ballotStatus(row.status)}</span></td><td class="desktop">{row.team || 'No team'}</td>
+					{#each voters as row}<tr><td><strong>{row.email}</strong>{#if row.url}<a href={String(row.url)}>{row.url}</a>{:else}<span class="muted">Replace link to make it available here.</span>{/if}<span class="mobile muted">{row.team || 'No team'} / {ballotStatus(row.status)}</span></td><td class="desktop">{row.team || 'No team'}</td>
 						<td class="desktop"><span class="badge" class:submitted={row.status === 'submitted'}>{ballotStatus(row.status)}</span></td>
 						<td><button class="quiet" onclick={() => open('voter', String(row.email))}>Manage<span class="sr-only"> {row.email}</span></button></td></tr>
 					{:else}<tr><td colspan="4" class="empty">{search || status !== 'all' ? 'No matching voters.' : 'Add voters to create their personal links.'}</td></tr>{/each}
@@ -185,7 +185,7 @@
 		<dialog bind:this={dialog} aria-labelledby="dialog-title" onclose={() => editor = ''} oncancel={(event) => { if (busy) event.preventDefault(); }}>
 			<div class="dialog-heading"><h2 id="dialog-title">{links ? 'Voter links ready' : titles[editor]}</h2><button class="quiet" aria-label="Close dialog" disabled={busy} onclick={() => dialog?.close()}>Close</button></div>
 			{#if form?.error}<p class="error notice" role="alert">{form.error}</p>{/if}
-			{#if links}<p>Copy these links before closing. Send each voter their own link.</p>
+			{#if links}<p>These links are saved in the Voters tab for later access and export. Send each voter their own link.</p>
 				<textarea id="voter-links" aria-label="Voter links" rows="6" readonly value={links} onfocus={(event) => event.currentTarget.select()}></textarea>
 				<div class="actions"><button class="primary" onclick={copyLinks}>{copied ? 'Copied' : 'Copy links'}</button><button class="quiet" onclick={() => dialog?.close()}>Done</button></div>
 			{:else if editor === 'voters'}
@@ -217,7 +217,7 @@
 				<p><strong>{voter?.email}</strong></p><p class="muted">{voter?.team || 'No team'}</p>
 				<h3>Ballot</h3>{#if ballot}<p>{ballot.status === 'submitted' ? 'Submitted' : 'Draft'} / {new Date(String(ballot.updated)).toLocaleString()}</p><ol>{#each [ballot.rank1, ballot.rank2, ballot.rank3, ballot.rank4, ballot.rank5].filter(Boolean) as name}<li>{name}</li>{/each}</ol>
 					<button class="quiet danger" onclick={() => open('reset', selected)}>Reset ballot</button>{:else}<p>No ballot started.</p>{/if}
-				<div class="dialog-section"><h3>Voter link</h3><p>Existing links cannot be retrieved. Replacing a link disables the old one.</p><button class="quiet" onclick={() => open('reissue', selected)}>Replace voter link</button></div>
+				<div class="dialog-section"><h3>Voter link</h3><p>{#if voter?.url}<a href={String(voter.url)}>{voter.url}</a>{:else}This older link was not saved. Replace it to make it available here.{/if} Replacing a link disables the old one.</p><button class="quiet" onclick={() => open('reissue', selected)}>Replace voter link</button></div>
 			{:else if editor === 'team'}
 				<form method="POST" action="?/run" use:enhance={submit}><input type="hidden" name="operation" value="team-name" /><input type="hidden" name="teamId" value={selected} />
 					<label>Team name<input name="name" value={String(team?.name ?? '')} maxlength="200" required /></label><p class="muted">{team?.members}</p><p class="muted">{team?.emails || 'No member emails in the Sheet.'}</p><button class="primary" disabled={busy}>Save name</button>

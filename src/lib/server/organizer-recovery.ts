@@ -29,8 +29,17 @@ export async function reissueVoter(
   const code = crypto.randomUUID();
   const hash = await hashCode(code);
   const url = new URL(`/v/${code}`, origin).href;
-  const result = db.prepare("UPDATE voters SET token_hash = ? WHERE email = ?").run(hash, email);
-  if (result.changes === 0) return json({ error: "voter not found" }, 404);
+  const found = inTransaction(db, () => {
+    const previous = db.prepare("SELECT token_hash FROM voters WHERE email = ?").get(email);
+    if (!previous) return false;
+    db.prepare("DELETE FROM settings WHERE key = ?").run(
+      `voter_link:${String(previous.token_hash)}`,
+    );
+    db.prepare("UPDATE voters SET token_hash = ? WHERE email = ?").run(hash, email);
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run(`voter_link:${hash}`, url);
+    return true;
+  });
+  if (!found) return json({ error: "voter not found" }, 404);
   return json({ email, url });
 }
 
