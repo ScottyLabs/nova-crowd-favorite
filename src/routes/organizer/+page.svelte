@@ -17,6 +17,15 @@
 	let deadline = $state('');
 	let copied = $state(false);
 	let feedbackTab = $state('');
+	let hackerSearch = $state('');
+	let selectedEmails = $state<string[]>([]);
+	const voterEmails = $derived(new Set((data.voters ?? []).map(row => String(row.email))));
+	const availableHackers = $derived((data.hackers ?? [])
+		.filter(row => !voterEmails.has(String(row.email)))
+		.map(row => ({ email: String(row.email), name: String(row.name ?? '') })));
+	const matchingHackers = $derived(availableHackers.filter(row =>
+		`${row.name} ${row.email}`.toLowerCase().includes(hackerSearch.trim().toLowerCase())));
+	const chosenEmails = $derived(availableHackers.filter(row => selectedEmails.includes(row.email)).map(row => row.email));
 	const ballotStatus = (value: unknown) => value === 'submitted' ? 'Submitted' : value === 'draft' ? 'Draft' : 'Not started';
 	const matches = (...values: unknown[]) => values.join(' ').toLowerCase().includes(search.trim().toLowerCase());
 	const ballots = $derived(new Map((data.ballots ?? []).map(ballot => [ballot.email, ballot])));
@@ -44,6 +53,7 @@
 
 	function open(kind: string, id = '') {
 		editor = kind; selected = id; copied = false; form = null;
+		if (kind === 'voters') { selectedEmails = []; hackerSearch = ''; }
 		if (kind === 'deadline') {
 			const date = new Date(data.deadline ?? Date.now() + 60 * 60 * 1000);
 			deadline = new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
@@ -144,7 +154,7 @@
 			{:else if tab === 'Hackers'}
 				<table class="hackers" aria-label="Hackers"><thead><tr><th>Name</th><th>Email</th><th>Registered</th></tr></thead><tbody>
 					{#each hackers as row}<tr><td><strong>{row.name || 'No name'}</strong></td><td>{row.email}</td><td>{row.registeredAt || 'Not synced'}</td></tr>
-					{:else}<tr><td colspan="3" class="empty">{search ? 'No matching hackers.' : 'Hackers appear here after the registration Sheet syncs.'}</td></tr>{/each}
+					{:else}<tr><td colspan="3" class="empty">{search ? 'No matching hackers.' : 'Hackers appear here after the check-in Sheet syncs.'}</td></tr>{/each}
 				</tbody></table>
 			{:else if tab === 'QR codes'}
 				<table aria-label="QR codes"><thead><tr><th>Number</th><th>Team</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>
@@ -180,7 +190,28 @@
 				<div class="actions"><button class="primary" onclick={copyLinks}>{copied ? 'Copied' : 'Copy links'}</button><button class="quiet" onclick={() => dialog?.close()}>Done</button></div>
 			{:else if editor === 'voters'}
 				<form method="POST" action="?/run" use:enhance={submit}><input type="hidden" name="operation" value="voters" />
-					<label>Email addresses<textarea name="emails" rows="5" required placeholder="One per line, or separated by commas"></textarea></label><button class="primary" disabled={busy}>Create voter links</button>
+					<input type="hidden" name="emails" value={chosenEmails.join('\n')} />
+					<p>Select hackers to create their personal voter links. People who already have a voter link are excluded.</p>
+					{#if availableHackers.length}
+						<label>Search hackers<input type="search" bind:value={hackerSearch} placeholder="Name or email" /></label>
+						<label class="hacker-choice select-all"><input type="checkbox"
+							checked={chosenEmails.length === availableHackers.length}
+							indeterminate={chosenEmails.length > 0 && chosenEmails.length < availableHackers.length}
+							disabled={busy}
+							onchange={(event) => selectedEmails = event.currentTarget.checked ? availableHackers.map(row => row.email) : []} />
+							<span>Select all {availableHackers.length} hackers</span>
+						</label>
+						<fieldset class="hacker-picker" disabled={busy}><legend class="sr-only">Hackers to add as voters</legend>
+							{#each matchingHackers as row (row.email)}
+								<label class="hacker-choice"><input type="checkbox" value={row.email} bind:group={selectedEmails} />
+									<span><strong>{row.name || row.email}</strong>{#if row.name}<small class="muted">{row.email}</small>{/if}</span>
+								</label>
+							{:else}<p class="empty">No matching hackers.</p>{/each}
+						</fieldset>
+						<p role="status">{chosenEmails.length} selected</p>
+						{#if chosenEmails.length > 1000}<p class="error">Select up to 1,000 hackers at a time.</p>{/if}
+					{:else}<p class="empty">No hackers to add. Sync check-in first, or check whether everyone already has a voter link.</p>{/if}
+					<button class="primary" disabled={busy || chosenEmails.length === 0 || chosenEmails.length > 1000}>Create voter links</button>
 				</form>
 			{:else if editor === 'voter'}
 				<p><strong>{voter?.email}</strong></p><p class="muted">{voter?.team || 'No team'}</p>
@@ -249,5 +280,12 @@
 	.notice { padding: 12px 16px; margin-top: 16px; background: var(--white); border-left: 3px solid var(--cobalt); } .notice.error { border-color: #a92018; }
 	dialog { width: min(520px, calc(100% - 32px)); max-height: calc(100dvh - 48px); padding: 24px; border: 1px solid var(--ink); background: var(--paper); color: var(--ink); } dialog::backdrop { background: rgb(43 43 43 / 45%); } .dialog-heading { margin-bottom: 20px; } dialog p { margin: 12px 0; overflow-wrap: anywhere; } dialog h3 { margin-top: 20px; } dialog ol { padding-left: 24px; } dialog .actions { margin-top: 16px; } .dialog-section { border-top: 1px solid #d2d2d9; margin-top: 24px; padding-top: 4px; }
 	.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } .mobile { display: none !important; }
+	.hacker-picker { max-height: 300px; overflow-y: auto; margin: 0; padding: 0; border: 1px solid #b3b5bd; }
+	.hacker-choice { display: flex; align-items: center; gap: 12px; margin: 0; padding: 12px; cursor: pointer; }
+	.hacker-choice + .hacker-choice { border-top: 1px solid #d2d2d9; }
+	.hacker-choice input { width: 18px; height: 18px; padding: 0; flex: 0 0 auto; accent-color: var(--cobalt); }
+	.hacker-choice span { min-width: 0; overflow-wrap: anywhere; }
+	.hacker-choice small { display: block; margin-top: 3px; }
+	.select-all { padding-left: 0; }
 	@media (max-width: 600px) { main { padding: 20px 16px; } h1 { font-size: 18px; } nav { gap: 20px; } .panel { padding: 16px; } .toolbar { flex-wrap: wrap; } .toolbar select { width: 100%; } .desktop { display: none; } .mobile { display: block !important; } th, td { padding: 12px 6px; } td button, td .button { padding: 8px; } .badge { white-space: normal; } .setting { align-items: start; flex-direction: column; } .event-bar { font-size: 12px; } .event-bar .muted { display: block; margin-top: 4px; } }
 </style>

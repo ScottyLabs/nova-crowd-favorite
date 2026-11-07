@@ -31,7 +31,8 @@ session; `deno task password` fetches a different password from OpenBao.
 
 ## Run the session
 
-1. In **Voters**, choose **Add voters**, enter tester emails, and copy the links.
+1. Sync tester names and emails from check-in. In **Voters**, choose **Add voters**,
+   select testers (or **Select all**), and copy the links.
    Send each tester their own link. The app does not send emails.
 1. Testers open their link, collect teams, add notes, rank them, and submit.
    Use separate browser profiles for multiple voters on one computer.

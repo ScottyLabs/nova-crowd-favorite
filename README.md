@@ -15,7 +15,8 @@ Passwords are stored in OpenBao. To rotate one, run
 `collar secrets set ORGANIZER_PASSWORD --profile prod --provider openbao`.
 Rotation signs everyone out. A missing password keeps the dashboard locked.
 
-- **Voters:** add emails and copy personal links. Search by email, team, or
+- **Voters:** select hackers by name or email, or select all, and copy personal links.
+  Hackers who already have voter links are excluded. Search by email, team, or
   ranked team; filter by ballot status. **Manage** shows the ballot and offers
   **Reset ballot** and **Replace voter link**.
 - **Teams:** search names and members. **Edit** changes the name or eligibility.
