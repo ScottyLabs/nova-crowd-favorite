@@ -152,8 +152,8 @@
 					{:else}<tr><td colspan="3" class="empty">{search ? 'No matching teams.' : 'Teams appear here after the submission Sheet syncs.'}</td></tr>{/each}
 				</tbody></table>
 			{:else if tab === 'Hackers'}
-				<table class="hackers" aria-label="Hackers"><thead><tr><th>Name</th><th>Email</th><th>Registered</th></tr></thead><tbody>
-					{#each hackers as row}<tr><td><strong>{row.name || 'No name'}</strong></td><td>{row.email}</td><td>{row.registeredAt || 'Not synced'}</td></tr>
+				<table class="hackers" aria-label="Hackers"><thead><tr><th>Name</th><th>Email</th><th>Checked in</th></tr></thead><tbody>
+					{#each hackers as row}<tr><td><strong>{row.name || 'No name'}</strong></td><td>{row.email}</td><td>{row.checkedInAt || 'Not synced'}</td></tr>
 					{:else}<tr><td colspan="3" class="empty">{search ? 'No matching hackers.' : 'Hackers appear here after the check-in Sheet syncs.'}</td></tr>{/each}
 				</tbody></table>
 			{:else if tab === 'QR codes'}

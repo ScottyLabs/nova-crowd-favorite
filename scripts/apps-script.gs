@@ -1,4 +1,4 @@
-// Sync team submissions and, optionally, a hackers tab from this spreadsheet.
+// Sync check-in teams and hacker names from this spreadsheet (read-only).
 //
 // Setup (in the Sheet: Extensions > Apps Script):
 // 1. Paste this file in.
@@ -6,7 +6,6 @@
 //      SYNC_URL         = https://<app-url>/api/sync
 //      SYNC_HMAC_SECRET = <same value as in OpenBao>
 //      SHEET_NAME       = <team submissions tab>
-//      HACKERS_SHEET_NAME = <optional hackers tab with Full Name, Email Address, and Timestamp columns>
 // 3. Run pushToApp, then add a recurring time-driven trigger.
 
 function pushToApp() {
@@ -15,8 +14,6 @@ function pushToApp() {
   const secret = props.getProperty("SYNC_HMAC_SECRET");
   const sheetName = props.getProperty("SHEET_NAME");
   pushSheet(sheetName, url, secret);
-  const hackersSheet = props.getProperty("HACKERS_SHEET_NAME");
-  if (hackersSheet) pushSheet(hackersSheet, url.replace(/\/$/, "") + "/hackers", secret);
 }
 
 function pushSheet(sheetName, url, secret) {

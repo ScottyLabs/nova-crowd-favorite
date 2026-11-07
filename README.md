@@ -102,25 +102,18 @@ Sync sends the whole Sheet. Missing teams become inactive. Changing a name or
 timestamp in the Sheet creates a new team identity; rename through the
 dashboard to keep the same team.
 
-## Hacker names
+## Check-in hackers
 
-Use columns `Full Name`, `Email Address`, and `Timestamp`, one person per row.
-Registration timestamps are stored as displayed in the Sheet.
+The check-in Sheet is the source of both teams and hacker names. Each adjacent
+`Name`/`Email` pair supplies a hacker, matched by email ignoring case. The Hackers
+list and voter picker show members of current check-in teams. The **Checked in**
+column shows the team's check-in timestamp.
 
-For a separate tab in the submission spreadsheet, add the Script Property
-`HACKERS_SHEET_NAME` with that tab's name. Keep the existing `SHEET_NAME`,
-`SYNC_URL`, and `SYNC_HMAC_SECRET`. The same `pushToApp` trigger syncs both tabs.
-
-For a separate spreadsheet, paste the same [Apps Script](scripts/apps-script.gs)
-there. Set `SYNC_URL` to
-`https://crowd-favorite.nova.scottylabs.org/api/sync/hackers`,
-`SYNC_HMAC_SECRET` to the production secret, and `SHEET_NAME` to the hackers tab.
-Leave `HACKERS_SHEET_NAME` unset. Run `pushToApp` and add a recurring trigger.
-
-Names match voter and team membership records by email, ignoring email case.
-Sync updates names without creating voter links or changing ballots. Missing
-rows keep their previous names. People without a name stay off the leaderboard.
-Existing voters and team memberships migrate automatically on app startup.
+The old registration sync endpoint is retired and returns HTTP 410. Disable its
+Apps Script trigger. On upgrade, unused registration-only identities are removed
+once, with a private recovery copy saved beside the production database first.
+Records referenced by teams, ballots, collections, or claimed QR codes are kept.
+Check-in sync updates names without changing existing voter links or ballots.
 
 ### Team check-in spreadsheet
 
@@ -139,11 +132,10 @@ Retrieve the secret from this repository:
 secretspec get SYNC_HMAC_SECRET --profile prod --provider openbao --reason 'Configure team spreadsheet sync'
 ```
 
-Leave `HACKERS_SHEET_NAME` unset. Run `pushToApp`, authorize it, and check for a
+Run `pushToApp`, authorize it, and check for a
 200 response in the execution log. Then add a time-driven trigger for
 `pushToApp` every five minutes. The script only reads spreadsheet cells.
-Disable the registration spreadsheet's trigger when using check-in as the sole
-source of hacker names; otherwise the two syncs can overwrite each other's names.
+Disable the registration spreadsheet's old trigger; it is no longer used.
 
 ## Results and exports
 

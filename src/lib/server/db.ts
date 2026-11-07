@@ -1,7 +1,9 @@
-import { realpathSync } from "node:fs";
+import { realpathSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { migrateBallots, migrateHackers } from "./migrations";
+import { cleanRegistrationRemnants } from "./checkin-cleanup";
+import { databaseSnapshot } from "./organizer-export";
 import schema from "./schema.sql?raw";
 
 // Opens the database file, creating it if it doesn't exist.
@@ -26,3 +28,7 @@ db.exec(schema);
 // CREATE TABLE does not update databases from earlier deployments.
 migrateBallots(db);
 migrateHackers(db);
+cleanRegistrationRemnants(db, () => {
+  const path = join(dirname(databasePath), `before-checkin-cleanup-${Date.now()}.db`);
+  writeFileSync(path, databaseSnapshot(db), { mode: 0o600 });
+});

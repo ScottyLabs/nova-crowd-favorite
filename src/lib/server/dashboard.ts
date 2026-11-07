@@ -4,7 +4,10 @@ import { inTransaction } from "./organizer.ts";
 export function dashboardRecords(db: DatabaseSync) {
   const hackers = db
     .prepare(
-      "SELECT email, name, registered_at AS registeredAt FROM hackers ORDER BY name COLLATE NOCASE, email",
+      `SELECT h.email, h.name, h.registered_at AS checkedInAt FROM hackers h
+      WHERE EXISTS (SELECT 1 FROM team_members m JOIN teams t ON t.id = m.team_id
+        WHERE m.email = h.email AND t.active = 1)
+      ORDER BY h.name COLLATE NOCASE, h.email`,
     )
     .all();
   const teams = db
