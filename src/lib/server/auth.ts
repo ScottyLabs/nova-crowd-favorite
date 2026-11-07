@@ -1,7 +1,10 @@
+import { eligibleVoterSql } from "./voter-eligibility";
 import { db } from "./db";
 import { codeFromRequest, hashCode } from "./voter-code";
 
-const findVoter = db.prepare("SELECT email FROM voters WHERE token_hash = ?");
+const findVoter = db.prepare(
+  `SELECT email FROM voters WHERE token_hash = ? AND ${eligibleVoterSql("voters.email")}`,
+);
 
 /** The voter's email for this request, or null if the code is missing or unknown. */
 export async function voterEmail(request: Request): Promise<string | null> {

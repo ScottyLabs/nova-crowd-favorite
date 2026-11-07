@@ -1,3 +1,4 @@
+import { eligibleVoterSql } from "./voter-eligibility.ts";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -40,6 +41,7 @@ function ballotCsv(db: DatabaseSync): string {
     .prepare(`
     SELECT b.voter_email, b.status, b.submitted_at AS updated_at, ${columns.join(",")}
     FROM ballots b ${joins.join(" ")}
+    WHERE ${eligibleVoterSql("b.voter_email")}
     ORDER BY b.voter_email
   `)
     .all();

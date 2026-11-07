@@ -1,3 +1,4 @@
+import { eligibleVoterSql } from "./voter-eligibility.ts";
 import type { DatabaseSync } from "node:sqlite";
 import { verifySignature } from "./hmac.ts";
 import { hashCode } from "./voter-code.ts";
@@ -19,7 +20,7 @@ const organizerListings = {
   voters(db: DatabaseSync) {
     return db
       .prepare(`
-      SELECT email, created_at AS createdAt FROM voters ORDER BY email
+      SELECT email, created_at AS createdAt FROM voters WHERE ${eligibleVoterSql("voters.email")} ORDER BY email
     `)
       .all();
   },
@@ -54,7 +55,7 @@ const organizerListings = {
       .prepare(`
       SELECT voter_email AS voterEmail, rank_1, rank_2, rank_3, rank_4, rank_5,
         status, submitted_at AS updatedAt
-      FROM ballots ORDER BY voter_email
+      FROM ballots WHERE ${eligibleVoterSql("ballots.voter_email")} ORDER BY voter_email
     `)
       .all()
       .map((ballot) => ({
@@ -135,8 +136,26 @@ function isVoterBody(body: unknown): body is { emails: string[] } {
   );
 }
 
+function hasDisqualifiedVoters(db: DatabaseSync, emails: string[]): boolean {
+  const eligible = db.prepare(`SELECT ${eligibleVoterSql("?")} AS eligible`);
+  return emails.some((email) => eligible.get(email)?.eligible === 0);
+}
+
 function saveVoterLink(db: DatabaseSync, hash: string, url: string): void {
   db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run(`voter_link:${hash}`, url);
+}
+
+function createVoterLinks(emails: string[], origin: string) {
+  return Promise.all(
+    emails.map(async (email) => {
+      const code = crypto.randomUUID();
+      return {
+        email,
+        hash: await hashCode(code),
+        url: new URL(`/v/${code}`, origin).href,
+      };
+    }),
+  );
 }
 
 export async function addVoters(
@@ -152,16 +171,9 @@ export async function addVoters(
   const body = input.body;
   if (!isVoterBody(body)) return json({ error: "provide emails (1-1000 addresses)" }, 400);
   const emails = [...new Set(body.emails.map((email) => email.trim().toLowerCase()))];
-  const voters = await Promise.all(
-    emails.map(async (email) => {
-      const code = crypto.randomUUID();
-      return {
-        email,
-        hash: await hashCode(code),
-        url: new URL(`/v/${code}`, origin).href,
-      };
-    }),
-  );
+  if (hasDisqualifiedVoters(db, emails))
+    return json({ error: "Disqualified team members cannot be added as voters" }, 400);
+  const voters = await createVoterLinks(emails, origin);
   const result = inTransaction(db, () => {
     const exists = db.prepare("SELECT 1 FROM voters WHERE email = ?");
     const existing = emails.filter((email) => exists.get(email) !== undefined);

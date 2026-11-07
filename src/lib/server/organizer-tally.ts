@@ -1,3 +1,4 @@
+import { eligibleVoterSql } from "./voter-eligibility.ts";
 import type { DatabaseSync } from "node:sqlite";
 import { verifySignature } from "./hmac.ts";
 import { IrvLimitError, tallyIrv } from "./irv.ts";
@@ -16,7 +17,7 @@ function readElection(db: DatabaseSync) {
       .all();
     const ballots = db
       .prepare(`
-      SELECT rank_1, rank_2, rank_3, rank_4, rank_5 FROM ballots WHERE status = 'submitted'
+      SELECT rank_1, rank_2, rank_3, rank_4, rank_5 FROM ballots WHERE status = 'submitted' AND ${eligibleVoterSql("ballots.voter_email")}
     `)
       .all();
     const deadline = db.prepare("SELECT value FROM settings WHERE key = 'voting_closes_at'").get();

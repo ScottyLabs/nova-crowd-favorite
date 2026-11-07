@@ -230,7 +230,7 @@
 				</div>
 			{:else if editor === 'reissue'}<p>Replace the link for <strong>{selected}</strong>? Their old link will stop working.</p>{@render action('reissue', { email: selected }, 'Replace link', 'primary')}
 			{:else if editor === 'reset'}<p>Clear the ballot for <strong>{selected}</strong>? Their collection and voter link stay intact. The previous ballot is archived.</p>{#if closed}<p class="error">Voting is closed. Reopen it before asking this voter to submit again.</p>{/if}{@render action('reset', { email: selected }, 'Reset ballot', 'danger')}
-			{:else if editor === 'disqualify' || editor === 'reinstate'}<p><strong>{team?.name}</strong></p><p>{editor === 'disqualify' ? 'Exclude this team from results. Existing ballots are preserved.' : 'Include this team in results again.'}</p>
+			{:else if editor === 'disqualify' || editor === 'reinstate'}<p><strong>{team?.name}</strong></p><p>{editor === 'disqualify' ? 'Disqualify this team and all its members. Members lose voter access and disappear from voter lists and the leaderboard. Their ballots stop counting.' : 'Reinstate this team and its members. Restore voter access and include their ballots in results.'}</p>
 				<form method="POST" action="?/run" use:enhance={submit}><input type="hidden" name="operation" value="disqualify" /><input type="hidden" name="teamId" value={selected} /><input type="hidden" name="disqualified" value={String(editor === 'disqualify')} />
 					{#if editor === 'disqualify'}<label>Reason (optional)<input name="reason" maxlength="1000" /></label>{/if}<button class:danger={editor === 'disqualify'} disabled={busy}>{editor === 'disqualify' ? 'Disqualify team' : 'Reinstate team'}</button>
 				</form>

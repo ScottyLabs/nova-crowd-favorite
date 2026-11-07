@@ -209,3 +209,28 @@ void test("an election exceeding the exact tie-search limit returns no ranking",
     db.close();
   }
 });
+
+void test("disqualified team members' existing ballots stop counting until reinstated", async () => {
+  const db = database();
+  try {
+    db.exec("INSERT INTO team_members VALUES ('b', 'submitted@example.com')");
+    const blocked = await tallyVotes(db, signed(), secret);
+    const blockedBody: unknown = await blocked.json();
+    ok(
+      typeof blockedBody === "object" && blockedBody !== null && "submittedBallots" in blockedBody,
+    );
+    strictEqual(blockedBody.submittedBallots, 1);
+    strictEqual(db.prepare("SELECT count(*) AS n FROM ballots").get()?.n, 3);
+    db.exec("DELETE FROM team_disqualifications WHERE team_id = 'b'");
+    const restored = await tallyVotes(db, signed(), secret);
+    const restoredBody: unknown = await restored.json();
+    ok(
+      typeof restoredBody === "object" &&
+        restoredBody !== null &&
+        "submittedBallots" in restoredBody,
+    );
+    strictEqual(restoredBody.submittedBallots, 2);
+  } finally {
+    db.close();
+  }
+});

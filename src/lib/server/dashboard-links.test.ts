@@ -26,3 +26,26 @@ void test("missing voter links are saved once with names and valid credentials",
     db.close();
   }
 });
+
+void test("team disqualification hides every member and reinstatement restores their links", async () => {
+  const db = new DatabaseSync(":memory:");
+  try {
+    db.exec(readFileSync(new URL("./schema.sql", import.meta.url), "utf8"));
+    db.exec(`INSERT INTO teams (id, response_id, name, members, updated_at)
+      VALUES ('t', 'r', 'Team', 'Alice, Bob', 'now');
+      INSERT INTO hackers (email, name) VALUES ('a@example.com', 'Alice'), ('b@example.com', 'Bob');
+      INSERT INTO team_members VALUES ('t', 'a@example.com'), ('t', 'b@example.com');
+      INSERT INTO voters VALUES ('a@example.com', 'a-hash', 'now'), ('b@example.com', 'b-hash', 'now');`);
+    await ensureVoterLinks(db, "https://vote.example.com");
+    const before = dashboardRecords(db).voters;
+    db.exec("INSERT INTO team_disqualifications VALUES ('t', 'Rule violation')");
+    strictEqual(dashboardRecords(db).voters.length, 0);
+    strictEqual(dashboardRecords(db).hackers.length, 0);
+    await ensureVoterLinks(db, "https://vote.example.com");
+    db.exec("DELETE FROM team_disqualifications");
+    strictEqual(dashboardRecords(db).voters.length, 2);
+    strictEqual(dashboardRecords(db).voters[0].url, before[0].url);
+  } finally {
+    db.close();
+  }
+});

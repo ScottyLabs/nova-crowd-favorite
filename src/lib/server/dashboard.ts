@@ -1,3 +1,4 @@
+import { eligibleVoterSql } from "./voter-eligibility.ts";
 import type { DatabaseSync } from "node:sqlite";
 import { hashCode } from "./voter-code.ts";
 import { inTransaction } from "./organizer.ts";
@@ -7,7 +8,7 @@ export async function ensureVoterLinks(db: DatabaseSync, origin: string): Promis
   const missing = db
     .prepare(`SELECT v.email, v.token_hash FROM voters v
     LEFT JOIN settings l ON l.key = 'voter_link:' || v.token_hash
-    WHERE l.value IS NULL`)
+    WHERE l.value IS NULL AND ${eligibleVoterSql("v.email")}`)
     .all();
   const replacements = await Promise.all(
     missing.map(async (row) => {
@@ -40,6 +41,7 @@ export function dashboardRecords(db: DatabaseSync) {
       `SELECT h.email, h.name, h.registered_at AS checkedInAt FROM hackers h
       WHERE EXISTS (SELECT 1 FROM team_members m JOIN teams t ON t.id = m.team_id
         WHERE m.email = h.email AND t.active = 1)
+      AND ${eligibleVoterSql("h.email")}
       ORDER BY h.name COLLATE NOCASE, h.email`,
     )
     .all();
@@ -53,14 +55,16 @@ export function dashboardRecords(db: DatabaseSync) {
 		(SELECT group_concat(t.name, ', ') FROM teams t JOIN team_members m ON m.team_id = t.id
 		WHERE lower(m.email) = v.email AND t.active = 1) AS team
 		FROM voters v LEFT JOIN hackers h ON h.email = v.email LEFT JOIN ballots b ON b.voter_email = v.email
-        LEFT JOIN settings l ON l.key = 'voter_link:' || v.token_hash ORDER BY v.email`)
+        LEFT JOIN settings l ON l.key = 'voter_link:' || v.token_hash
+        WHERE ${eligibleVoterSql("v.email")} ORDER BY v.email`)
     .all();
   const ballots = db
     .prepare(`SELECT b.voter_email AS email, b.status, b.submitted_at AS updated,
 		t1.name AS rank1, t2.name AS rank2, t3.name AS rank3, t4.name AS rank4, t5.name AS rank5
 		FROM ballots b LEFT JOIN teams t1 ON t1.id = b.rank_1 LEFT JOIN teams t2 ON t2.id = b.rank_2
 		LEFT JOIN teams t3 ON t3.id = b.rank_3 LEFT JOIN teams t4 ON t4.id = b.rank_4
-		LEFT JOIN teams t5 ON t5.id = b.rank_5 ORDER BY b.voter_email`)
+		LEFT JOIN teams t5 ON t5.id = b.rank_5
+        WHERE ${eligibleVoterSql("b.voter_email")} ORDER BY b.voter_email`)
     .all();
   const stickers = db
     .prepare(`SELECT q.code, t.name AS team, q.claimed_by AS email
