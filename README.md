@@ -93,6 +93,9 @@ In the submission Sheet, open **Extensions > Apps Script** and paste
 Use headers `Timestamp`, `Team Name`, `Team Members`, and `Team Emails`.
 Check-in forms with repeated `Name` and `Email` columns are also supported;
 each member column is imported, and unlabeled helper columns are ignored.
+Adjacent `Name`/`Email` pairs also populate hacker names and use the check-in
+timestamp. This lets check-in supply both teams and hacker names without the
+registration spreadsheet. Blank member names leave saved hacker names intact.
 Run `pushToApp`, authorize it, and add a recurring time-driven trigger.
 Sync sends the whole Sheet. Missing teams become inactive. Changing a name or
 timestamp in the Sheet creates a new team identity; rename through the
@@ -138,7 +141,8 @@ secretspec get SYNC_HMAC_SECRET --profile prod --provider openbao --reason 'Conf
 Leave `HACKERS_SHEET_NAME` unset. Run `pushToApp`, authorize it, and check for a
 200 response in the execution log. Then add a time-driven trigger for
 `pushToApp` every five minutes. The script only reads spreadsheet cells.
-The registration spreadsheet keeps its separate script and trigger.
+Disable the registration spreadsheet's trigger when using check-in as the sole
+source of hacker names; otherwise the two syncs can overwrite each other's names.
 
 ## Results and exports
 

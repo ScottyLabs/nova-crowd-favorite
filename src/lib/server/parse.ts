@@ -3,6 +3,8 @@ export type ParsedTeam = {
   name: string;
   members: string;
   emails: string[];
+  hackers: { email: string; name: string }[];
+  checkedInAt: string;
   repoUrl: string | null;
   slidesUrl: string | null;
   videoUrl: string | null;
@@ -61,6 +63,13 @@ export function parseRow(row: string[], c: ReturnType<typeof findColumns>): Pars
           : c.emailColumns.flatMap((i) => splitEmails(get(i))),
       ),
     ],
+    hackers: c.memberColumns.flatMap((i) => {
+      // Pair only adjacent Name/Email fields; never guess across missing fields.
+      if (!c.emailColumns.includes(i + 1) || !get(i)) return [];
+      const emails = splitEmails(get(i + 1));
+      return emails.length === 1 ? [{ email: emails[0], name: get(i) }] : [];
+    }),
+    checkedInAt: timestamp,
     repoUrl: get(c.repo) || null,
     slidesUrl: get(c.slides) || null,
     videoUrl: get(c.video) || null,

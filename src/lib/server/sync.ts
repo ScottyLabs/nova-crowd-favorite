@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { saveCheckInHackers } from "./hackers";
 import { findColumns, type ParsedTeam, parseRow } from "./parse";
 
 // New response_id -> insert with a fresh id. Existing -> update fields, keep the same id.
@@ -35,6 +36,7 @@ function saveTeam(t: ParsedTeam, now: string): void {
   if (typeof id !== "string") throw new Error("Team upsert did not return an id");
 
   clearMembers.run(id);
+  saveCheckInHackers(db, t.hackers, t.checkedInAt);
   for (const email of t.emails) {
     addHacker.run(email);
     addMember.run(id, email);
