@@ -2,7 +2,7 @@ import { fail, redirect, error } from "@sveltejs/kit";
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { db } from "../../lib/server/db";
-import { dashboardRecords, updateTeamName } from "../../lib/server/dashboard";
+import { dashboardRecords, ensureVoterLinks, updateTeamName } from "../../lib/server/dashboard";
 import {
   allowLogin,
   apiRequest,
@@ -74,9 +74,10 @@ function list(form: FormData, name: string): string[] {
     .filter(Boolean);
 }
 
-export const load: PageServerLoad = ({ cookies }) => {
+export const load: PageServerLoad = async ({ cookies, url }) => {
   if (!signedIn(cookies, password()))
     return { authenticated: false, configured: Boolean(password()) };
+  await ensureVoterLinks(db, process.env.APP_URL ?? url.origin);
   return { authenticated: true, configured: true, ...dashboardRecords(db) };
 };
 

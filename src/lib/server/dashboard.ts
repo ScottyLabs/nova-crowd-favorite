@@ -1,5 +1,38 @@
 import type { DatabaseSync } from "node:sqlite";
+import { hashCode } from "./voter-code.ts";
 import { inTransaction } from "./organizer.ts";
+
+/** Fill missing saved links once, preserving every link already available. */
+export async function ensureVoterLinks(db: DatabaseSync, origin: string): Promise<void> {
+  const missing = db
+    .prepare(`SELECT v.email, v.token_hash FROM voters v
+    LEFT JOIN settings l ON l.key = 'voter_link:' || v.token_hash
+    WHERE l.value IS NULL`)
+    .all();
+  const replacements = await Promise.all(
+    missing.map(async (row) => {
+      const code = crypto.randomUUID();
+      return {
+        email: row.email,
+        previous: row.token_hash,
+        hash: await hashCode(code),
+        url: new URL(`/v/${code}`, origin).href,
+      };
+    }),
+  );
+  inTransaction(db, () => {
+    for (const row of replacements) {
+      const changed = db
+        .prepare("UPDATE voters SET token_hash = ? WHERE email = ? AND token_hash IS ?")
+        .run(row.hash, row.email, row.previous);
+      if (changed.changes !== 0)
+        db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run(
+          `voter_link:${row.hash}`,
+          row.url,
+        );
+    }
+  });
+}
 
 export function dashboardRecords(db: DatabaseSync) {
   const hackers = db
@@ -16,10 +49,10 @@ export function dashboardRecords(db: DatabaseSync) {
 		FROM teams t LEFT JOIN team_disqualifications d ON d.team_id = t.id ORDER BY t.name`)
     .all();
   const voters = db
-    .prepare(`SELECT v.email, b.status, l.value AS url,
+    .prepare(`SELECT v.email, h.name, b.status, l.value AS url,
 		(SELECT group_concat(t.name, ', ') FROM teams t JOIN team_members m ON m.team_id = t.id
 		WHERE lower(m.email) = v.email AND t.active = 1) AS team
-		FROM voters v LEFT JOIN ballots b ON b.voter_email = v.email
+		FROM voters v LEFT JOIN hackers h ON h.email = v.email LEFT JOIN ballots b ON b.voter_email = v.email
         LEFT JOIN settings l ON l.key = 'voter_link:' || v.token_hash ORDER BY v.email`)
     .all();
   const ballots = db

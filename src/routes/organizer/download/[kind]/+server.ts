@@ -1,5 +1,5 @@
 import { db } from "../../../../lib/server/db";
-import { dashboardRecords } from "../../../../lib/server/dashboard";
+import { dashboardRecords, ensureVoterLinks } from "../../../../lib/server/dashboard";
 import { error } from "@sveltejs/kit";
 import { apiRequest, signedIn } from "../../../../lib/server/organizer-session";
 import type { RequestHandler } from "./$types";
@@ -10,15 +10,18 @@ function cell(value: import("node:sqlite").SQLOutputValue): string {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
-export const GET: RequestHandler = ({ cookies, params, fetch }) => {
+export const GET: RequestHandler = async ({ cookies, params, fetch, url }) => {
   if (!signedIn(cookies, process.env.ORGANIZER_PASSWORD ?? "")) error(401, "Sign in again.");
   if (params.kind === "voters.csv" || params.kind === "voters.tsv") {
+    await ensureVoterLinks(db, process.env.APP_URL ?? url.origin);
     const delimiter = params.kind.endsWith("tsv") ? "\t" : ",";
     const rows = dashboardRecords(db).voters;
     const body =
       [
-        "email" + delimiter + "url",
-        ...rows.map((row) => [row.email, row.url].map((value) => cell(value)).join(delimiter)),
+        ["name", "email", "url"].join(delimiter),
+        ...rows.map((row) =>
+          [row.name, row.email, row.url].map((value) => cell(value)).join(delimiter),
+        ),
       ].join("\r\n") + "\r\n";
     return new Response(body, {
       headers: {
