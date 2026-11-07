@@ -91,6 +91,8 @@ In the submission Sheet, open **Extensions > Apps Script** and paste
 | `SHEET_NAME` | Submission tab name |
 
 Use headers `Timestamp`, `Team Name`, `Team Members`, and `Team Emails`.
+Check-in forms with repeated `Name` and `Email` columns are also supported;
+each member column is imported, and unlabeled helper columns are ignored.
 Run `pushToApp`, authorize it, and add a recurring time-driven trigger.
 Sync sends the whole Sheet. Missing teams become inactive. Changing a name or
 timestamp in the Sheet creates a new team identity; rename through the
@@ -115,6 +117,28 @@ Names match voter and team membership records by email, ignoring email case.
 Sync updates names without creating voter links or changing ballots. Missing
 rows keep their previous names. People without a name stay off the leaderboard.
 Existing voters and team memberships migrate automatically on app startup.
+
+### Team check-in spreadsheet
+
+In the team check-in spreadsheet, open **Extensions > Apps Script** and paste
+[scripts/apps-script.gs](scripts/apps-script.gs). Set these Script Properties:
+
+| Property | Value |
+| --- | --- |
+| `SYNC_URL` | `https://crowd-favorite.nova.scottylabs.org/api/sync` |
+| `SYNC_HMAC_SECRET` | Existing production secret from OpenBao |
+| `SHEET_NAME` | `Form Responses 1` |
+
+Retrieve the secret from this repository:
+
+```sh
+secretspec get SYNC_HMAC_SECRET --profile prod --provider openbao --reason 'Configure team spreadsheet sync'
+```
+
+Leave `HACKERS_SHEET_NAME` unset. Run `pushToApp`, authorize it, and check for a
+200 response in the execution log. Then add a time-driven trigger for
+`pushToApp` every five minutes. The script only reads spreadsheet cells.
+The registration spreadsheet keeps its separate script and trigger.
 
 ## Results and exports
 

@@ -30,6 +30,8 @@ export function findColumns(header: string[]) {
     name: find("team name"),
     members: find("team members"),
     emails: find("team emails"),
+    memberColumns: header.flatMap((h, i) => (h.trim().toLowerCase() === "name" ? [i] : [])),
+    emailColumns: header.flatMap((h, i) => (h.trim().toLowerCase() === "email" ? [i] : [])),
     repo: find("github"),
     slides: find("slides"),
     video: find("video"),
@@ -48,8 +50,17 @@ export function parseRow(row: string[], c: ReturnType<typeof findColumns>): Pars
     // Timestamp + name, so two teams submitting in the same second don't collide
     responseId: `${timestamp}|${name.toLowerCase()}`,
     name,
-    members: splitList(get(c.members)).join(", "),
-    emails: splitEmails(get(c.emails)),
+    members:
+      c.members >= 0
+        ? splitList(get(c.members)).join(", ")
+        : c.memberColumns.map(get).filter(Boolean).join(", "),
+    emails: [
+      ...new Set(
+        c.emails >= 0
+          ? splitEmails(get(c.emails))
+          : c.emailColumns.flatMap((i) => splitEmails(get(i))),
+      ),
+    ],
     repoUrl: get(c.repo) || null,
     slidesUrl: get(c.slides) || null,
     videoUrl: get(c.video) || null,
