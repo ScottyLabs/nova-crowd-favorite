@@ -1,3 +1,4 @@
+import { reconcileAutomaticBallots } from "./automatic-ballots.ts";
 import { eligibleTeamSql } from "./team-eligibility.ts";
 import { eligibleVoterSql } from "./voter-eligibility.ts";
 import type { DatabaseSync } from "node:sqlite";
@@ -42,6 +43,7 @@ export async function tallyVotes(
     secret,
   );
   if (!valid) return json({ error: "invalid signature" }, 401);
+  reconcileAutomaticBallots(db);
   const { teams, ballots, closesAt } = readElection(db);
   const eligible = new Set(
     teams.flatMap((team) => (typeof team.id === "string" && team.eligible === 1 ? [team.id] : [])),

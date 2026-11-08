@@ -182,7 +182,7 @@
 				{:else}<p class="empty">Calculate results when you are ready to review the ranking.</p>{/if}
 			{:else if tab === 'Settings'}
 				<div class="setting"><div><h3>Voting closes</h3><p>{data.deadline ? new Date(data.deadline).toLocaleString() : 'No closing time set'}</p></div><div class="actions"><button class="quiet" onclick={() => open('deadline')}>Change time</button>{#if data.deadline}<button class="text-button" onclick={() => open('clear-deadline')}>Clear closing time</button>{/if}</div></div>
-				<div class="setting"><div><h3>Voting is {closed ? 'closed' : 'open'}</h3><p>{closed ? 'Voters cannot submit ballots.' : 'Voters can collect, rank, and submit.'}</p></div><button class="quiet" onclick={() => open(closed ? 'open' : 'close')}>{closed ? 'Reopen voting' : 'Close voting now'}</button></div>
+				<div class="setting"><div><h3>Voting is {closed ? 'closed' : 'open'}</h3><p>{closed ? 'Saved nonempty drafts are automatically submitted. Reopening returns auto-submitted ballots to drafts.' : 'Voters can collect, rank, and submit.'}</p></div><button class="quiet" onclick={() => open(closed ? 'open' : 'close')}>{closed ? 'Reopen voting' : 'Close voting now'}</button></div>
 				<div class="setting"><div><h3>Database backup</h3><p>Save a private copy of all event data.</p></div><a class="button quiet" href="/organizer/download/database">Download backup</a></div>
 				<div class="setting"><div><h3>Restore database</h3><p>Replace event data with a saved backup.</p></div><button class="text-button danger" onclick={() => open('restore')}>Restore from backup</button></div>
 			{/if}

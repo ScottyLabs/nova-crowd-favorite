@@ -1,3 +1,4 @@
+import { reconcileAutomaticBallots } from "./automatic-ballots.ts";
 import { eligibleVoterSql } from "./voter-eligibility.ts";
 import type { DatabaseSync } from "node:sqlite";
 import { verifySignature } from "./hmac.ts";
@@ -279,6 +280,7 @@ export async function setVotingDeadline(
     );
   }
   const closesAt = body.closesAt === null ? null : new Date(body.closesAt).toISOString();
+  reconcileAutomaticBallots(db);
   if (closesAt === null) {
     db.prepare("DELETE FROM settings WHERE key = 'voting_closes_at'").run();
   } else {
@@ -287,6 +289,7 @@ export async function setVotingDeadline(
       ON CONFLICT(key) DO UPDATE SET value = excluded.value
     `).run(closesAt);
   }
+  reconcileAutomaticBallots(db);
   return json({
     closesAt,
     closed: closesAt !== null && Date.now() >= Date.parse(closesAt),

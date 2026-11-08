@@ -113,7 +113,7 @@ void test("closed voting produces final results and reopening produces provision
     const closed: unknown = await (await tallyVotes(db, signed(), secret)).json();
     ok(typeof closed === "object" && closed !== null && "provisional" in closed);
     strictEqual(closed.provisional, false);
-    db.exec("UPDATE settings SET value = '2999-01-01T00:00:00Z'");
+    db.exec("UPDATE settings SET value = '2999-01-01T00:00:00Z' WHERE key = 'voting_closes_at'");
     const future: unknown = await (await tallyVotes(db, signed(), secret)).json();
     ok(typeof future === "object" && future !== null && "provisional" in future);
     strictEqual(future.provisional, true);

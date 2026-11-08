@@ -1,6 +1,12 @@
+import { building } from "$app/env";
+import { db } from "./lib/server/db";
+import { reconcileAutomaticBallots, watchVotingDeadline } from "./lib/server/automatic-ballots";
 import type { Handle } from "@sveltejs/kit/hooks";
 
+if (!building) watchVotingDeadline(db);
+
 export const handle: Handle = async ({ event, resolve }) => {
+  if (!building) reconcileAutomaticBallots(db);
   const response = await resolve(event);
   if (event.url.pathname.startsWith("/organizer")) {
     response.headers.set("cache-control", "no-store");
