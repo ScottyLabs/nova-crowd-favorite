@@ -20,14 +20,14 @@
 </script>
 
 <svelte:head>
-	<title>Judging Leaderboard | Crowd Favorite</title>
+	<title>Individual Voter Leaderboard | Crowd Favorite</title>
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
 <Background group="ballot" />
 <main>
 	<header>
-		<div><p class="eyebrow">Crowd Favorite</p><h1>Judging Leaderboard</h1><p>Most unique teams collected</p></div>
+		<div><p class="eyebrow">Crowd Favorite</p><h1>Individual Voter Leaderboard</h1><p>Most unique teams collected</p></div>
 		<a href="/organizer">Organizer</a>
 	</header>
 	{#if data.leaders.length === 0}
