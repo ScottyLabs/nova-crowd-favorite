@@ -9,38 +9,44 @@
   };
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    scottylabs = {
-      url = "git+https://git.cmu.dev/ScottyLabs/kennel";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    scottylabs.url = "git+https://git.cmu.dev/ScottyLabs/kennel";
+    nixpkgs.follows = "scottylabs/nixpkgs";
+    flake-parts.follows = "scottylabs/flake-parts";
   };
 
   outputs =
-    { nixpkgs, scottylabs, ... }:
-    let
-      forAllSystems = nixpkgs.lib.genAttrs [
+    inputs:
+    inputs.flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [ inputs.scottylabs.flakeModules.default ];
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "aarch64-darwin"
       ];
-    in
-    {
-      packages = forAllSystems (
-        system:
-        let
-          pkgs = nixpkgs.legacyPackages.${system};
-          helpers = scottylabs.mkLib pkgs;
-          web = helpers.buildDenoTask {
-            src = ./.;
-            pname = "nova-crowd-favorite";
-            inherit (builtins.fromJSON (builtins.readFile ./package.json)) version;
-            compile = true;
-          };
-        in
+
+      perSystem =
+        { lib, helpers, ... }:
         {
-          inherit web;
-          default = web;
-        }
-      );
+          scottylabs = {
+            project.name = "nova-crowd-favorite";
+            sqlite.enable = true;
+            deno = {
+              enable = true;
+              svelte.enable = true;
+            };
+
+            processes.web.run = "exec secretspec run -P dev -- deno task dev --host 127.0.0.1";
+          };
+
+          services.web = {
+            package = helpers.buildDenoTask {
+              src = ./.;
+              pname = "nova-crowd-favorite";
+              inherit (lib.importJSON ./package.json) version;
+              compile = true;
+            };
+            customDomain = "crowd-favorite.nova.scottylabs.org";
+          };
+        };
     };
 }

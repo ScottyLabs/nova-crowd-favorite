@@ -7,7 +7,7 @@ import { databaseSnapshot } from "./organizer-export";
 import schema from "./schema.sql?raw";
 
 // Opens the database file, creating it if it doesn't exist.
-// devenv shell and kennel both set DATABASE_PATH
+// the dev shell and kennel both set DATABASE_PATH
 const databasePath = process.env.DATABASE_PATH ?? "nova.db";
 // Resolve systemd's symlinked state directory before opening SQLite.
 export const db = new DatabaseSync(

@@ -2,10 +2,10 @@
 set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
-command -v deno >/dev/null || { echo 'Install Deno or enter the devenv shell first.' >&2; exit 1; }
+command -v deno >/dev/null || { echo 'Install Deno or enter the dev shell first.' >&2; exit 1; }
 [[ -d node_modules ]] || { echo 'Run deno install first.' >&2; exit 1; }
 
-# Override devenv settings and keep test data outside the repository.
+# Override dev shell settings and keep test data outside the repository.
 umask 077
 session_dir=$(mktemp -d /tmp/nova-bug-test.XXXXXX)
 export DATABASE_PATH="$session_dir/nova.db"

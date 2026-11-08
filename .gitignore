@@ -1,11 +1,6 @@
-# Nix / devenv
-.devenv/
+# Nix
 .pre-commit-config.yaml
 result
-
-# AI
-.mcp.json
-.claude
 
 # JS / deno
 node_modules/
