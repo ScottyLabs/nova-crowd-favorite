@@ -1,11 +1,11 @@
 import { deepStrictEqual, strictEqual } from "node:assert";
-import { createHmac } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
 import { addOrganizerTeam } from "./organizer-team-add.ts";
 
-const secret = "test-only-team-add-secret";
+const secret = randomBytes(32).toString("hex");
 function signed(value: unknown): Request {
   const body = JSON.stringify(value);
   const timestamp = String(Date.now());
