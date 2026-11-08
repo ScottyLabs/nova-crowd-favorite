@@ -165,7 +165,6 @@ void test("zero-vote candidates are not promoted into a shared first place", asy
     deepStrictEqual(result.ranking, [
       { rank: 1, teamId: "a", name: "Eligible team" },
       { rank: 1, teamId: "c", name: "Unranked team" },
-      { rank: 3, teamId: "d", name: "Lower preference" },
     ]);
     strictEqual(result.submittedBallots, 3);
   } finally {

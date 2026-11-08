@@ -122,7 +122,7 @@
 					{:else if tab === 'Teams'}{teams.length} of {data.teams?.length} registered teams
 					{:else if tab === 'Hackers'}{data.hackers?.length} hackers
 					{:else if tab === 'QR codes'}{data.stickers?.filter(row => row.team === null).length} unclaimed / {data.stickers?.length} total
-					{:else if tab === 'Results'}{form?.result?.ranking ? `${form.result.submittedBallots} submitted ballots` : 'Count submitted ballots'}
+					{:else if tab === 'Results'}{form?.result?.ranking ? `${form.result.submittedBallots} submitted ballots` : 'Find the IRV winner from submitted ballots'}
 					{:else}Voting and database controls{/if}
 				</p></div>
 				<div class="actions">

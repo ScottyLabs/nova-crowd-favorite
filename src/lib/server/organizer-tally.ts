@@ -3,7 +3,7 @@ import { eligibleTeamSql } from "./team-eligibility.ts";
 import { eligibleVoterSql } from "./voter-eligibility.ts";
 import type { DatabaseSync } from "node:sqlite";
 import { verifySignature } from "./hmac.ts";
-import { IrvLimitError, tallyIrv } from "./irv.ts";
+import { IrvLimitError, tallyIrvWinner } from "./irv.ts";
 import { json } from "./organizer.ts";
 
 function readElection(db: DatabaseSync) {
@@ -55,7 +55,7 @@ export async function tallyVotes(
   );
   let result;
   try {
-    result = tallyIrv(rankings);
+    result = tallyIrvWinner(rankings);
   } catch (error) {
     if (error instanceof IrvLimitError) {
       return json({ error: error.message }, 422);

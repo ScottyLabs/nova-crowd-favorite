@@ -99,12 +99,12 @@ class Elections {
  * every tied-lowest candidate's elimination (parallel-universe tiebreaking).
  * Report all possible winners as tied, remove that group, and rerun IRV.
  */
-export function tallyIrv(ballots: string[][], maxStates = 20_000): IrvResult {
+export function tallyIrv(ballots: string[][], maxStates = 20_000, maxPlaces = Infinity): IrvResult {
   const teams = [...new Set(ballots.flat())].toSorted();
   const elections = new Elections(teams, ballots, maxStates);
   let remaining = (1n << BigInt(teams.length)) - 1n;
   const ranking: IrvResult["ranking"] = [];
-  while (remaining !== 0n) {
+  while (remaining !== 0n && ranking.length < maxPlaces) {
     const selected = elections.winners(remaining);
     const rank = ranking.length + 1;
     for (const i of elections.members(selected)) ranking.push({ rank, teamId: teams[i] });
@@ -116,6 +116,11 @@ export function tallyIrv(ballots: string[][], maxStates = 20_000): IrvResult {
     winnerId: first.length === 1 ? first[0] : null,
     tiedTeamIds: first.length > 1 ? first : [],
     ranking,
-    unrankedTeamIds: [],
+    unrankedTeamIds: elections.members(remaining).map((i) => teams[i]),
   };
+}
+
+/** Compute only first place, preserving all possible first-place ties. */
+export function tallyIrvWinner(ballots: string[][], maxStates = 20_000): IrvResult {
+  return tallyIrv(ballots, maxStates, 1);
 }
