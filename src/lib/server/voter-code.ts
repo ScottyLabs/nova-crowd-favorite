@@ -1,7 +1,4 @@
-// Voter codes: the voting link is /v/<code>. The browser sends the code as
-// `Authorization: Bearer <code>`. Only a SHA-256 hash of each code is stored
-// (voters.token_hash) for authentication. Organizer-created links are also saved
-// in settings for later retrieval and export by signed-in organizers.
+// Voter codes: the voting link is /v/<code>. The browser sends the code as `Authorization: Bearer <code>`. Only a SHA-256 hash of each code is stored (voters.token_hash) for authentication. Organizer-created links are also saved in settings for later retrieval and export by signed-in organizers.
 
 const CODE_PATTERN = /^[A-Za-z0-9_-]{4,128}$/u;
 const enc = new TextEncoder();

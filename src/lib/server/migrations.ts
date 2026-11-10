@@ -40,8 +40,7 @@ export function migrateHackers(db: DatabaseSync): void {
         .some((key) => key.table === "hackers"),
   );
   if (tables.length === 0) return;
-  // SQLite requires rebuilding a table to add a foreign key. Disable enforcement
-  // outside the transaction, then check every reference before committing.
+  // SQLite requires rebuilding a table to add a foreign key. Disable enforcement outside the transaction, then check every reference before committing.
   db.exec("PRAGMA foreign_keys = OFF");
   try {
     inTransaction(db, () => {

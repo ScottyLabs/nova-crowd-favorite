@@ -1,14 +1,12 @@
 // Voter identity: the personal code from the voting link, saved in this browser.
 //
-// The voting link looks like https://<site>/v/<code>. Opening it saves the code
-// here, and every API call sends it as `Authorization: Bearer <code>`.
+// The voting link looks like https://<site>/v/<code>. Opening it saves the code here, and every API call sends it as `Authorization: Bearer <code>`.
 // The server checks the code against the hashed tokens in the voters table.
 
 const STORAGE_KEY = "nova-voter-code";
 
 // Letters, digits, dash and underscore, 4 to 128 characters.
-// Loose on purpose: the server decides if a code is real, this only
-// rejects links that are obviously broken (cut off, extra characters).
+// Loose on purpose: the server decides if a code is real, this only rejects links that are obviously broken (cut off, extra characters).
 const CODE_PATTERN = /^[A-Za-z0-9_-]{4,128}$/u;
 
 export function isValidCode(code: string): boolean {

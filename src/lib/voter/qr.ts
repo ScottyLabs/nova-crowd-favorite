@@ -1,6 +1,5 @@
 // Reads the team code out of a scanned QR.
-// Team stickers hold a link like https://<our site>/t/<code>, so the phone camera
-// also works. The in-app scanner only needs the <code> part.
+// Team stickers hold a link like https://<our site>/t/<code>, so the phone camera also works. The in-app scanner only needs the <code> part.
 
 const TEAM_LINK_PATH = /^\/t\/([^/]+)\/?$/u;
 

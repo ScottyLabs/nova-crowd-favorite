@@ -58,8 +58,7 @@ class Elections {
     const others = active.filter((i) => counts[i] !== minimum);
     const next = Math.min(...others.map((i) => counts[i]));
     if (others.length > 0 && minimum * lowest.length < next) {
-      // Safe batch elimination, including zero-vote candidates. Even every
-      // transfer staying within this group cannot let it catch the next team.
+      // Safe batch elimination, including zero-vote candidates. Even every transfer staying within this group cannot let it catch the next team.
       const eliminated = lowest.reduce((group, i) => group | this.bits[i], 0n);
       return this.winners(mask & ~eliminated);
     }

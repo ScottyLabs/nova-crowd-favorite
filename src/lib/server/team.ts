@@ -1,8 +1,7 @@
 import { eligibleTeamSql } from "./team-eligibility";
 import { db } from "./db";
 
-// Shared team and QR code helpers for /api/my-team, /api/collection and /api/qr/claim.// QR stickers are printed before the event with no team. The first teammate who
-// taps "Scan my team" and scans one links it to their team (one code per team).
+// Shared team and QR code helpers for /api/my-team, /api/collection and /api/qr/claim.// QR stickers are printed before the event with no team. The first teammate who taps "Scan my team" and scans one links it to their team (one code per team).
 
 export interface TeamSummary {
   id: string;

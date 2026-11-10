@@ -1,5 +1,4 @@
-// Shapes the voter screens work with. They match what the API returns
-// (see src/routes/api/collection and src/routes/api/ballot).
+// Shapes the voter screens work with. They match what the API returns (see src/routes/api/collection and src/routes/api/ballot).
 
 export interface Team {
   id: string;
