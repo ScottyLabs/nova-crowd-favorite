@@ -38,6 +38,10 @@
             processes.web.run = "exec secretspec run -P dev -- deno task dev --host 127.0.0.1";
           };
 
+          # Keep dependency caches from before the flake migration out of test discovery.
+          pre-commit.settings.hooks.deno-test.entry =
+            lib.mkForce "deno test -A --ignore=.devenv,.scottylabs --permit-no-files";
+
           services.web = {
             package = helpers.buildDenoTask {
               src = ./.;

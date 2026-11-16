@@ -1,4 +1,4 @@
 {
   "nodeModulesDir": "auto",
-  "exclude": [".scottylabs", ".svelte-kit", "dist", "build", "node_modules"]
+  "exclude": [".devenv", ".scottylabs", ".svelte-kit", "dist", "build", "node_modules"]
 }

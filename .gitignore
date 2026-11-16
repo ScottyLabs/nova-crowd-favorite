@@ -1,6 +1,12 @@
 # Nix
+.devenv/
+.scottylabs/
 .pre-commit-config.yaml
 result
+
+# Generated agent configuration
+.mcp.json
+.claude/
 
 # JS / deno
 node_modules/
